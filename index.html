@@ -188,13 +188,13 @@
     .prospect-table th{
       position:sticky;top:0;
       background:rgba(4,9,18,0.95);backdrop-filter:blur(12px);
-      padding:10px 14px;text-align:left;font-size:11px;font-weight:600;
+      padding:7px 10px;text-align:left;font-size:10px;font-weight:700;
       color:var(--dim);text-transform:uppercase;letter-spacing:.07em;
       border-bottom:1px solid var(--border);white-space:nowrap;z-index:5;
     }
     .prospect-table td{
-      padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);
-      vertical-align:middle;font-size:13px;transition:background .12s;
+      padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);
+      vertical-align:middle;font-size:12px;transition:background .12s;
       background:transparent;
     }
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .3s ease both;}
@@ -215,9 +215,12 @@
     .axs-tag{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:#c084fc;}
 
     .status-badge{
-      display:inline-flex;align-items:center;border-radius:7px;
-      padding:3px 9px;font-size:11px;font-weight:700;white-space:nowrap;
+      display:inline-flex;align-items:center;gap:4px;border-radius:7px;
+      padding:3px 8px;font-size:11px;font-weight:700;white-space:nowrap;
+      cursor:pointer;transition:filter .15s;user-select:none;
     }
+    .status-badge:hover{filter:brightness(1.2);}
+    .status-badge::after{content:'▾';font-size:9px;opacity:.7;}
     .s-New{background:rgba(107,122,141,.15);color:#9aa3b0;}
     .s-Called{background:rgba(59,130,246,.12);color:#60a5fa;box-shadow:0 0 8px rgba(59,130,246,.12);}
     .s-Contacted{background:rgba(20,184,166,.12);color:#2dd4bf;box-shadow:0 0 8px rgba(20,184,166,.12);}
@@ -225,9 +228,41 @@
     .s-Met{background:rgba(245,158,11,.12);color:#fbbf24;box-shadow:0 0 8px rgba(245,158,11,.12);}
     .s-Converted{background:rgba(34,197,94,.12);color:#4ade80;box-shadow:0 0 8px rgba(34,197,94,.12);}
     .s-Cold{background:rgba(239,68,68,.12);color:#f87171;box-shadow:0 0 8px rgba(239,68,68,.12);}
+    .s-Cancelled{background:rgba(100,100,100,.15);color:#6b7280;box-shadow:none;}
 
-    .mini-check{width:16px;height:16px;accent-color:var(--gold);cursor:pointer;}
-    .fu-date{font-size:12px;color:var(--dim);}
+    /* Quick status picker */
+    .status-picker{
+      position:fixed;z-index:9000;
+      background:rgba(6,13,24,0.98);border:1px solid rgba(240,165,0,.2);
+      border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:2px;
+      backdrop-filter:blur(24px);box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 20px rgba(240,165,0,.05);
+      min-width:145px;animation:pickerIn .15s cubic-bezier(.34,1.4,.64,1) both;
+    }
+    @keyframes pickerIn{from{opacity:0;transform:translateY(-6px) scale(.97);}to{opacity:1;transform:none;}}
+    .picker-btn{
+      background:transparent;border:none;border-radius:8px;
+      padding:7px 12px;cursor:pointer;text-align:left;
+      font-size:12px;font-weight:600;font-family:'Inter',sans-serif;
+      transition:background .1s;display:flex;align-items:center;gap:8px;
+    }
+    .picker-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+    /* Follow-up needed indicator */
+    .fu-needed{display:inline-flex;align-items:center;gap:5px;}
+    .fu-pulse{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:fuPulse 1.5s ease-in-out infinite;flex-shrink:0;}
+    @keyframes fuPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
+    /* Quick call btn */
+    .call-btn{
+      display:inline-flex;align-items:center;gap:3px;
+      background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);
+      border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;
+      color:#60a5fa;cursor:pointer;transition:all .15s;white-space:nowrap;
+    }
+    .call-btn:hover{background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.4);}
+
+    .mini-check{width:15px;height:15px;accent-color:var(--gold);cursor:pointer;}
+    .fu-date{font-size:11px;color:var(--dim);}
     .fu-today{color:var(--amber);font-weight:700;}
     .fu-overdue{color:var(--red);font-weight:700;}
 
@@ -451,7 +486,8 @@
       <select class="filter-select" id="fStatus">
         <option value="">All Statuses</option>
         <option>New</option><option>Called</option><option>Contacted</option>
-        <option>Meeting Set</option><option>Met</option><option>Converted</option><option>Cold</option>
+        <option>Meeting Set</option><option>Met</option><option>Converted</option>
+        <option>Cold</option><option>Cancelled</option>
       </select>
     </div>
     <div class="filter-wrap">
@@ -490,6 +526,7 @@
             <th>Age</th>
             <th>Batch</th>
             <th>Status</th>
+            <th>Called</th>
             <th>Follow-up</th>
             <th>Met</th>
             <th>Purchased</th>
@@ -611,9 +648,9 @@ function toast(msg,dur=3500){
 function calcAge(by){return by?new Date().getFullYear()-by:'—';}
 function today(){return new Date().toISOString().slice(0,10);}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
-const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold'];
-const STATUS_COLOR={New:'#9aa3b0',Called:'#60a5fa',Contacted:'#2dd4bf','Meeting Set':'#c084fc',Met:'#fbbf24',Converted:'#4ade80',Cold:'#f87171'};
-function statusCls(s){return 's-'+(s||'New').replace(' ','');}
+const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];
+const STATUS_COLOR={New:'#9aa3b0',Called:'#60a5fa',Contacted:'#2dd4bf','Meeting Set':'#c084fc',Met:'#fbbf24',Converted:'#4ade80',Cold:'#f87171',Cancelled:'#6b7280'};
+function statusCls(s){return 's-'+(s||'New').replace(/\s/g,'');}
 const SAVINGS_OPTS=['Below S$999','S$1,000 - S$2,499','S$2,500 - S$3,999','Above S$4,000'];
 
 // ── Filter & render ──
@@ -673,20 +710,30 @@ function renderList(){
     document.getElementById('emptyState').style.display='block';return;
   }
   document.getElementById('emptyState').style.display='none';
+  const needsFollowUp = p => p.status==='Met' && !p.purchased && p.status!=='Cancelled' && p.status!=='Cold';
   tbody.innerHTML=filtered.map((p,i)=>{
     const fuc=fuClass(p.followUpDate);
     const sel=p.id===selectedId?'selected':'';
     const isAXS=p.leadType==='axs';
-    return `<tr class="${sel}" style="animation-delay:${Math.min(i*0.03,0.5)}s" onclick="window._select('${p.id}')">
+    const followUpCell = needsFollowUp(p)
+      ? `<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p.followUpDate||'Set date!'}</span></span>`
+      : `<span class="fu-date ${fuc}">${p.followUpDate||'—'}</span>`;
+    return `<tr class="${sel}" style="animation-delay:${Math.min(i*0.03,0.4)}s" onclick="window._select('${p.id}')">
       <td>
-        <div class="p-name">${esc(p.name)}</div>
+        <div class="p-name" style="font-size:13px">${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
       </td>
       <td class="p-phone">${esc(p.phone||'—')}</td>
-      <td style="color:var(--muted);font-variant-numeric:tabular-nums">${calcAge(p.birthYear)}</td>
+      <td style="color:var(--muted)">${calcAge(p.birthYear)}</td>
       <td><span class="batch-tag ${isAXS?'axs-tag':''}">${esc(p.batch||'—')}</span></td>
-      <td><span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span></td>
-      <td class="fu-date ${fuc}">${p.followUpDate||'—'}</td>
+      <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
+        <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>
+      </td>
+      <td>
+        <span class="call-btn" onclick="event.stopPropagation();window._addCall('${p.id}')">📞 +1</span>
+        <span style="font-size:11px;color:var(--dim);margin-left:4px">${p.calledCount||0}x</span>
+      </td>
+      <td>${followUpCell}</td>
       <td><input type="checkbox" class="mini-check" ${p.met?'checked':''} onclick="event.stopPropagation();window._flag('${p.id}','met',this.checked)" title="Met"/></td>
       <td><input type="checkbox" class="mini-check" ${p.purchased?'checked':''} onclick="event.stopPropagation();window._flag('${p.id}','purchased',this.checked)" title="Purchased"/></td>
     </tr>`;
@@ -701,6 +748,47 @@ window._select=id=>{
 window._flag=async(id,field,val)=>{
   await updateProspect(id,{[field]:val});
   if(selectedId===id){const p=prospects.find(x=>x.id===id);if(p)renderDetailContent(p);}
+};
+
+window._addCall=async(id)=>{
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const newCount=(p.calledCount||0)+1;
+  await updateProspect(id,{calledCount:newCount,status:p.status==='New'?'Called':p.status});
+  if(selectedId===id){const upd=prospects.find(x=>x.id===id);if(upd)renderDetailContent(upd);}
+  renderStats();
+};
+
+window._quickStatus=(id,event)=>{
+  event.stopPropagation();
+  document.getElementById('statusPicker')?.remove();
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const picker=document.createElement('div');
+  picker.className='status-picker';picker.id='statusPicker';
+  STATUSES.forEach(s=>{
+    const c=STATUS_COLOR[s];
+    const btn=document.createElement('button');
+    btn.className='picker-btn';
+    btn.innerHTML=`<span class="picker-dot" style="background:${c}"></span><span style="color:${p.status===s?'#fff':c}">${s}${p.status===s?' ✓':''}</span>`;
+    btn.style.background=p.status===s?c+'22':'transparent';
+    btn.onmouseenter=()=>{if(p.status!==s)btn.style.background=c+'18';};
+    btn.onmouseleave=()=>{if(p.status!==s)btn.style.background='transparent';};
+    btn.onclick=async()=>{
+      picker.remove();
+      await updateProspect(id,{status:s});
+      if(selectedId===id){const upd=prospects.find(x=>x.id===id);if(upd)renderDetailContent(upd);}
+      renderStats();
+    };
+    picker.appendChild(btn);
+  });
+  const rect=event.currentTarget.getBoundingClientRect();
+  let top=rect.bottom+4,left=rect.left;
+  picker.style.top=top+'px';picker.style.left=left+'px';
+  document.body.appendChild(picker);
+  // keep inside viewport
+  const pr=picker.getBoundingClientRect();
+  if(pr.right>window.innerWidth)picker.style.left=(window.innerWidth-pr.width-8)+'px';
+  if(pr.bottom>window.innerHeight)picker.style.top=(rect.top-pr.height-4)+'px';
+  setTimeout(()=>document.addEventListener('click',()=>document.getElementById('statusPicker')?.remove(),{once:true}),0);
 };
 
 // ── Detail panel ──

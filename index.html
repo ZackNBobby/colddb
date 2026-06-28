@@ -660,6 +660,7 @@ function today(){return new Date().toISOString().slice(0,10);}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
 
 const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];
+const PIPELINE=['pickedUp','meetingSet','met','purchased']; // ordered earliest→latest
 const STATUS_COLOR={New:'#9aa3b0',Called:'#60a5fa',Contacted:'#2dd4bf','Meeting Set':'#c084fc',Met:'#fbbf24',Converted:'#4ade80',Cold:'#f87171',Cancelled:'#6b7280'};
 const FUNNEL_STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted'];
 const SAVINGS_OPTS=['Below S$999','S$1,000 - S$2,499','S$2,500 - S$3,999','Above S$4,000'];
@@ -1024,8 +1025,42 @@ window._select=id=>{
   if(p)openDetail(p);
 };
 window._flag=async(id,field,val)=>{
-  await updateProspect(id,{[field]:val});
-  if(selectedId===id){const p=prospects.find(x=>x.id===id);if(p)renderDetailContent(p);}
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const upd={[field]:val};
+  // Pipeline cascade: ticking a stage auto-ticks all earlier stages;
+  // un-ticking a stage auto-unticks all later stages.
+  const pIdx=PIPELINE.indexOf(field);
+  if(pIdx>=0){
+    if(val){for(let i=0;i<pIdx;i++)upd[PIPELINE[i]]=true;}
+    else{for(let i=pIdx+1;i<PIPELINE.length;i++)upd[PIPELINE[i]]=false;}
+  }
+  // Save to Firestore + update local data without triggering renderList()
+  try{
+    await updateDoc(doc(db,'prospects',id),{...upd,updatedAt:serverTimestamp()});
+    const idx=prospects.findIndex(x=>x.id===id);
+    if(idx>=0)prospects[idx]={...prospects[idx],...upd};
+  }catch(e){toast('Error: '+e.message);return;}
+  const p2=prospects.find(x=>x.id===id);
+  // Targeted DOM patch — only touch the cells that changed
+  const row=document.querySelector(`tr[data-id="${id}"]`);
+  if(row){
+    const tds=row.querySelectorAll('td');
+    const setChk=(tdIdx,f)=>{const inp=tds[tdIdx]?.querySelector('.tgl input');if(inp)inp.checked=!!p2[f];};
+    setChk(9,'pickedUp');setChk(10,'meetingSet');setChk(11,'met');setChk(12,'purchased');setChk(13,'referral');
+    // Re-render follow-up cell if met/purchased changed (affects the pulse dot)
+    if(pIdx>=0||field==='met'||field==='purchased'){
+      const needsFU=p2.status==='Met'&&!p2.purchased;
+      const fuc=fuClass(p2.followUpDate);
+      const fuCell=tds[8];
+      if(fuCell)fuCell.innerHTML=needsFU
+        ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p2.followUpDate||'Set date!'}</span></span>`
+        :`<span class="fu-date ${fuc}">${p2.followUpDate||'—'}</span>`;
+    }
+  }
+  // Update funnel strip + status chips instantly
+  renderStats();renderFunnelBar();
+  // Refresh detail panel if open on this prospect
+  if(selectedId===id)renderDetailContent(p2);
 };
 window._addCall=async id=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;

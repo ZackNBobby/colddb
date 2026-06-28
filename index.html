@@ -603,10 +603,20 @@ document.getElementById('btnGoogleLogin').addEventListener('click',()=>signInWit
 document.getElementById('btnSignOut').addEventListener('click',()=>signOut(auth));
 
 // ── Firestore ──
+function sortProspects(){
+  prospects.sort((a,b)=>{
+    const tA=a.createdAt?.seconds??0;
+    const tB=b.createdAt?.seconds??0;
+    if(tB!==tA)return tB-tA; // newer batches first
+    return (a.rowIndex??0)-(b.rowIndex??0); // within same batch, preserve CSV row order
+  });
+}
+
 async function loadProspects(){
   try{
     const snap=await getDocs(query(collection(db,'prospects'),orderBy('createdAt','desc')));
     prospects=snap.docs.map(d=>({id:d.id,...d.data()}));
+    sortProspects();
     renderAll();
   }catch(e){toast('Error loading: '+e.message);}
 }
@@ -1124,7 +1134,7 @@ function handleFile(file){
       const rows=parseCSV(e.target.result);
       if(rows.length<2){toast('CSV appears empty');return;}
       const headers=rows[0];
-      const data=rows.slice(1).filter(r=>r.some(c=>(c||'').trim())).map(r=>mapCSVRow(headers,r,batch)).filter(p=>p.name);
+      const data=rows.slice(1).filter(r=>r.some(c=>(c||'').trim())).map((r,i)=>mapCSVRow(headers,r,batch,i)).filter(p=>p.name);
       pendingImport=data;
       const cols=['name','phone','nric','gender','birthYear','policies','premiumPerYear','savings','priorities','extraNotes'];
       const visible=cols.filter(c=>data.slice(0,5).some(p=>(p[c]||'').toString().trim()));
@@ -1161,7 +1171,7 @@ function parseCSV(text){
   return rows;
 }
 
-function mapCSVRow(headers,row,batch){
+function mapCSVRow(headers,row,batch,rowIndex=0){
   const isAXS=batch.toLowerCase().startsWith('axs');
   const get=(...names)=>{
     for(const n of names){
@@ -1182,6 +1192,7 @@ function mapCSVRow(headers,row,batch){
     premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premiums / year'),
     savings:isAXS?get('savings'):'',priorities:isAXS?get('priorities'):'',
     extraNotes:get('extra notes'),followUpDate:'',followUpHistory:[],
+    rowIndex,
   };
 }
 
@@ -1196,10 +1207,11 @@ window._confirmImport=async()=>{
     await Promise.all(chunk.map(async data=>{
       try{
         const ref=await addDoc(collection(db,'prospects'),{...data,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-        prospects.unshift({id:ref.id,...data});ok++;
+        prospects.push({id:ref.id,...data});ok++;
       }catch{fail++;}
     }));
   }
+  sortProspects();
   document.getElementById('importModal')?.remove();
   pendingImport=[];renderAll();
   toast(`Imported ${ok} prospects${fail?` (${fail} failed)`:''}  ✓`);

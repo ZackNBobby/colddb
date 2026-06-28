@@ -117,13 +117,16 @@
     .bfr-count{font-size:10px;font-weight:800;min-width:18px;text-align:right;}
     .bfr-pct{font-size:9px;color:var(--dim);min-width:28px;text-align:right;}
     /* Mini funnel strip above table */
-    .funnel-strip{background:rgba(2,5,12,.75);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0;display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;}
+    .funnel-strip{background:rgba(2,5,12,.75);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0;display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;justify-content:center;}
     .funnel-strip::-webkit-scrollbar{height:3px;}
     .funnel-strip::-webkit-scrollbar-thumb{background:rgba(240,165,0,.15);border-radius:2px;}
     .fs-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 14px;border-right:1px solid var(--border);white-space:nowrap;min-width:80px;position:relative;transition:background .15s;}
     .fs-item:last-child{border-right:none;}
     .fs-item::after{content:'›';position:absolute;right:-8px;color:var(--dim);font-size:11px;z-index:1;}
     .fs-item:last-child::after{display:none;}
+    .fs-divider{width:1px;background:rgba(255,255,255,.08);margin:6px 0;flex-shrink:0;}
+    .fs-item.fs-exit{background:rgba(239,68,68,.03);}
+    .fs-item.fs-exit::after{display:none;}
     .fs-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:2px;}
     .fs-num{font-size:16px;font-weight:900;line-height:1;}
     .fs-pct{font-size:10px;color:var(--dim);margin-top:1px;}
@@ -904,7 +907,7 @@ function renderFunnelBar(){
   const bar=document.getElementById('funnelBar');if(!bar)return;
   const src=activeBatch?prospects.filter(p=>p.batch===activeBatch):prospects;
   const fc=getFunnelCounts(src);
-  const stages=[
+  const pipeline=[
     {label:'Total',    n:fc.total,    base:fc.total,    color:'#6b7a8d'},
     {label:'Called',   n:fc.called,   base:fc.total,    color:'#60a5fa'},
     {label:'Contacted',n:fc.contacted,base:fc.called,   color:'#2dd4bf'},
@@ -912,7 +915,11 @@ function renderFunnelBar(){
     {label:'Met',      n:fc.met,      base:fc.apptSet,  color:'#fbbf24'},
     {label:'Converted',n:fc.converted,base:fc.met,      color:'#4ade80'},
   ];
-  bar.innerHTML=stages.map(s=>{
+  const exits=[
+    {label:'Cold',     n:fc.cold,     base:fc.total,    color:'#f87171',exit:true},
+    {label:'Cancelled',n:fc.cancelled,base:fc.total,    color:'#6b7280',exit:true},
+  ];
+  const pipeHtml=pipeline.map(s=>{
     const pct=s.base?((s.n/s.base)*100).toFixed(1)+'%':'—';
     return`<div class="fs-item">
       <div class="fs-label" style="color:${s.color}">${s.label}</div>
@@ -920,6 +927,15 @@ function renderFunnelBar(){
       <div class="fs-pct">${pct}</div>
     </div>`;
   }).join('');
+  const exitHtml=exits.map(s=>{
+    const pct=s.base?((s.n/s.base)*100).toFixed(1)+'%':'—';
+    return`<div class="fs-item fs-exit">
+      <div class="fs-label" style="color:${s.color}">${s.label}</div>
+      <div class="fs-num" style="color:${s.color}">${s.n}</div>
+      <div class="fs-pct">${pct}</div>
+    </div>`;
+  }).join('');
+  bar.innerHTML=pipeHtml+'<div class="fs-divider"></div>'+exitHtml;
 }
 
 function renderAll(){

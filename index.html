@@ -18,7 +18,7 @@
       --purple:#a855f7;--teal:#14b8a6;--amber:#f59e0b;
     }
     *{margin:0;padding:0;box-sizing:border-box;}
-    html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;display:flex;justify-content:center;}
+    html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;}
 
     /* ── Animated Background ── */
     .bg-scene{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
@@ -80,7 +80,7 @@
     @keyframes ringPulse{0%,100%{opacity:.4;transform:scale(1);}50%{opacity:.1;transform:scale(1.02);}}
 
     /* ── App ── */
-    #app{position:relative;z-index:1;display:none;height:100vh;flex-direction:column;width:100%;max-width:1300px;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+    #app{position:relative;z-index:1;display:none;height:100vh;flex-direction:column;width:100%;}
     #app.visible{display:flex;}
 
     /* ── Topbar ── */
@@ -178,7 +178,8 @@
     }
 
     /* ── Main ── */
-    .main{display:flex;flex:1;overflow:hidden;}
+    .main{display:flex;flex:1;overflow:hidden;justify-content:center;}
+    .main-inner{display:flex;width:100%;max-width:1300px;overflow:hidden;}
 
     /* ── List ── */
     .list-pane{flex:1;overflow-y:auto;min-width:0;background:transparent;}
@@ -531,6 +532,7 @@
   <div class="statsrow" id="statsRow"></div>
 
   <div class="main">
+    <div class="main-inner">
     <div class="list-pane" id="listPane">
       <table class="prospect-table">
         <thead>
@@ -557,6 +559,7 @@
     <div class="detail-pane" id="detailPane">
       <div class="detail-inner" id="detailInner"></div>
     </div>
+    </div><!-- /main-inner -->
   </div>
 </div>
 

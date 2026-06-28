@@ -94,7 +94,7 @@
     .funnel-pct{font-size:10px;color:var(--dim);min-width:38px;text-align:right;}
 
     /* Batch cards */
-    .batch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:28px;}
+    .batch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:28px;}
     .batch-card{background:rgba(6,13,24,.75);border:1px solid var(--border);border-radius:16px;padding:18px;cursor:pointer;backdrop-filter:blur(12px);transition:all .22s;position:relative;overflow:hidden;}
     .batch-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(240,165,0,.04),transparent);opacity:0;transition:opacity .2s;}
     .batch-card:hover{border-color:var(--gold-border);transform:translateY(-3px);box-shadow:0 8px 32px rgba(240,165,0,.1);}
@@ -104,12 +104,14 @@
     .batch-type-tag{font-size:10px;font-weight:700;border-radius:5px;padding:2px 7px;}
     .tag-ekko{background:rgba(240,165,0,.12);color:var(--gold);border:1px solid rgba(240,165,0,.2);}
     .tag-axs{background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.25);}
-    .batch-card-count{font-size:24px;font-weight:900;color:var(--text);margin-bottom:4px;}
-    .batch-card-sub{font-size:11px;color:var(--dim);margin-bottom:12px;}
-    .batch-mini-bar{height:5px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden;display:flex;margin-bottom:10px;}
-    .batch-mini-seg{height:100%;transition:width .6s ease;}
-    .batch-status-row{display:flex;flex-wrap:wrap;gap:6px;}
-    .batch-status-chip{font-size:10px;font-weight:600;color:var(--dim);}
+    .batch-card-count{font-size:24px;font-weight:900;color:var(--text);margin-bottom:2px;}
+    .batch-card-sub{font-size:11px;color:var(--dim);margin-bottom:10px;}
+    .batch-funnel{display:flex;flex-direction:column;gap:4px;}
+    .bfr{display:flex;align-items:center;gap:6px;}
+    .bfr-label{font-size:10px;font-weight:600;min-width:76px;text-align:right;white-space:nowrap;}
+    .bfr-bar-wrap{flex:1;height:10px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;}
+    .bfr-bar{height:100%;border-radius:4px;min-width:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+    .bfr-count{font-size:10px;font-weight:700;min-width:22px;text-align:right;}
     .batch-card-actions{position:absolute;top:12px;right:12px;display:flex;gap:4px;opacity:0;transition:opacity .15s;}
     .batch-card:hover .batch-card-actions{opacity:1;}
     .batch-action-btn{background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:all .15s;color:var(--dim);}
@@ -684,8 +686,20 @@ function renderBatchGrid(){
     const total=bProspects.length;
     const counts={};STATUSES.forEach(s=>counts[s]=0);
     bProspects.forEach(p=>{if(counts[p.status]!==undefined)counts[p.status]++;});
-    const miniBar=STATUSES.filter(s=>counts[s]>0).map(s=>`<div class="batch-mini-seg" style="width:${(counts[s]/Math.max(total,1)*100).toFixed(1)}%;background:${statusColors[s]}"></div>`).join('');
-    const statusChips=STATUSES.filter(s=>counts[s]>0).slice(0,4).map(s=>`<span class="batch-status-chip" style="color:${statusColors[s]}">${s}: ${counts[s]}</span>`).join('');
+    const funnelRows=FUNNEL_STATUSES.map(s=>{
+      const n=counts[s],pct=total?((n/total)*100).toFixed(0):0;
+      const barW=total?Math.max((n/total)*100,n>0?4:0):0;
+      return `<div class="bfr">
+        <div class="bfr-label" style="color:${statusColors[s]}">${s}</div>
+        <div class="bfr-bar-wrap"><div class="bfr-bar" style="width:${barW}%;background:${statusColors[s]}"></div></div>
+        <div class="bfr-count" style="color:${statusColors[s]}">${n}</div>
+      </div>`;
+    }).join('');
+    const cold=counts['Cold']||0,cancelled=counts['Cancelled']||0;
+    const coldLine=cold||cancelled?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:12px;">
+      ${cold?`<span style="font-size:10px;color:${statusColors['Cold']}">Cold: ${cold}</span>`:''}
+      ${cancelled?`<span style="font-size:10px;color:${statusColors['Cancelled']}">Cancelled: ${cancelled}</span>`:''}
+    </div>`:'';
     html+=`<div class="batch-card" onclick="window._viewBatch('${esc(b.name)}')">
       <div class="batch-card-actions" onclick="event.stopPropagation()">
         <div class="batch-action-btn" onclick="window._renameBatch('${b.id}')" title="Rename">✎</div>
@@ -696,9 +710,8 @@ function renderBatchGrid(){
         <span class="batch-type-tag ${b.type==='axs'?'tag-axs':'tag-ekko'}">${b.type==='axs'?'AXS':'Ekko'}</span>
       </div>
       <div class="batch-card-count">${total}</div>
-      <div class="batch-card-sub">prospects</div>
-      <div class="batch-mini-bar">${miniBar}</div>
-      <div class="batch-status-row">${statusChips||'<span style="color:var(--dim);font-size:10px">No data yet</span>'}</div>
+      <div class="batch-card-sub">${total===1?'prospect':'prospects'}</div>
+      ${total?`<div class="batch-funnel">${funnelRows}</div>${coldLine}`:'<div style="color:var(--dim);font-size:11px;padding:8px 0">No data yet — import a CSV to get started.</div>'}
     </div>`;
   });
   // Add new batch card

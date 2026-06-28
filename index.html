@@ -114,6 +114,11 @@
     .bfr-count{font-size:10px;font-weight:700;min-width:22px;text-align:right;}
     .batch-card-actions{position:absolute;top:12px;right:12px;display:flex;gap:4px;opacity:0;transition:opacity .15s;}
     .batch-card:hover .batch-card-actions{opacity:1;}
+    .appt-badge{position:absolute;top:10px;left:12px;display:flex;align-items:center;gap:5px;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700;border:1px solid;}
+    .appt-badge.today{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35);color:#f87171;}
+    .appt-badge.soon{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fbbf24;}
+    .appt-badge.week{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.25);color:#60a5fa;}
+    .appt-ping{width:6px;height:6px;border-radius:50%;background:currentColor;animation:fuPulse 1.2s ease-in-out infinite;flex-shrink:0;}
     .batch-action-btn{background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:all .15s;color:var(--dim);}
     .batch-action-btn:hover{background:rgba(240,165,0,.15);border-color:var(--gold-border);color:var(--gold);}
     .batch-action-btn.del:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:var(--red);}
@@ -259,10 +264,20 @@
     .check-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px;padding:9px 11px;background:rgba(10,20,36,.5);border-radius:8px;border:1px solid var(--border);}
     .check-label{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;user-select:none;color:var(--muted);}
     .check-label input[type=checkbox]{width:14px;height:14px;accent-color:var(--gold);cursor:pointer;}
-    .fu-history{margin-top:7px;padding:9px 11px;background:rgba(10,20,36,.6);border:1px solid var(--border);border-radius:8px;max-height:110px;overflow-y:auto;}
-    .fu-entry{font-size:11px;color:var(--dim);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+    .fu-history{margin-top:7px;padding:9px 11px;background:rgba(10,20,36,.6);border:1px solid var(--border);border-radius:8px;max-height:130px;overflow-y:auto;}
+    .fu-entry{font-size:11px;color:var(--dim);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:6px;align-items:baseline;}
     .fu-entry:last-child{border-bottom:none;}
-    .fu-entry-date{color:var(--muted);font-weight:700;}
+    .fu-entry-date{color:var(--muted);font-weight:700;white-space:nowrap;font-size:10px;}
+    .fu-entry-icon{font-size:10px;flex-shrink:0;}
+    .note-add-row{display:flex;gap:6px;margin-top:8px;}
+    .note-add-input{flex:1;background:rgba(10,20,36,.8);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:11px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+    .note-add-input:focus{border-color:var(--gold-border);}
+    .note-add-btn{background:rgba(240,165,0,.1);border:1px solid var(--gold-border);border-radius:8px;padding:6px 10px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
+    .note-add-btn:hover{background:rgba(240,165,0,.2);}
+    .appt-indicator{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px;margin-bottom:8px;}
+    .appt-indicator.today{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25);}
+    .appt-indicator.soon{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.22);}
+    .appt-indicator.future{background:rgba(59,130,246,.08);color:#60a5fa;border:1px solid rgba(59,130,246,.2);}
     .d-actions{display:flex;gap:7px;margin-top:16px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--border);}
     .btn-save{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#000;box-shadow:0 2px 12px rgba(240,165,0,.25);}
     .btn-save:hover{box-shadow:0 4px 20px rgba(240,165,0,.4);transform:translateY(-1px);}
@@ -704,12 +719,22 @@ function renderBatchGrid(){
       ${cold?`<span style="font-size:10px;color:${statusColors['Cold']}">Cold: ${cold}</span>`:''}
       ${cancelled?`<span style="font-size:10px;color:${statusColors['Cancelled']}">Cancelled: ${cancelled}</span>`:''}
     </div>`:'';
+    // Appointment ping
+    const t=today();
+    const apptToday=bProspects.filter(p=>p.appointmentDate===t);
+    const apptSoon=bProspects.filter(p=>{if(!p.appointmentDate||p.appointmentDate<=t)return false;const d=Math.ceil((new Date(p.appointmentDate)-new Date())/86400000);return d<=3;});
+    const apptWeek=bProspects.filter(p=>{if(!p.appointmentDate||p.appointmentDate<=t)return false;const d=Math.ceil((new Date(p.appointmentDate)-new Date())/86400000);return d>3&&d<=14;});
+    let apptBadge='';
+    if(apptToday.length)apptBadge=`<div class="appt-badge today"><span class="appt-ping"></span>${apptToday.length} appt today!</div>`;
+    else if(apptSoon.length)apptBadge=`<div class="appt-badge soon"><span class="appt-ping"></span>${apptSoon.length} appt in 3 days</div>`;
+    else if(apptWeek.length)apptBadge=`<div class="appt-badge week"><span class="appt-ping"></span>${apptWeek.length} appt this fortnight</div>`;
     html+=`<div class="batch-card" onclick="window._viewBatch('${esc(b.name)}')">
+      ${apptBadge}
       <div class="batch-card-actions" onclick="event.stopPropagation()">
         <div class="batch-action-btn" onclick="window._renameBatch('${b.id}')" title="Rename">✎</div>
         <div class="batch-action-btn del" onclick="window._deleteBatch('${b.id}')" title="Delete">✕</div>
       </div>
-      <div class="batch-card-head">
+      <div class="batch-card-head" style="${apptBadge?'margin-top:24px':''}">
         <div class="batch-card-name">${esc(b.name)}</div>
         <span class="batch-type-tag ${b.type==='axs'?'tag-axs':'tag-ekko'}">${b.type==='axs'?'AXS':'Ekko'}</span>
       </div>
@@ -953,9 +978,34 @@ function closeDetail(){
 }
 window._closeDetail=closeDetail;
 
+function apptClass(dateStr){
+  if(!dateStr)return null;
+  const days=Math.ceil((new Date(dateStr)-new Date())/86400000);
+  if(days<0)return null; // past
+  if(days===0)return'today';
+  if(days<=3)return'soon';
+  if(days<=14)return'future';
+  return null;
+}
+function apptLabel(dateStr){
+  if(!dateStr)return null;
+  const days=Math.ceil((new Date(dateStr)-new Date())/86400000);
+  if(days<0)return null;
+  if(days===0)return'Today!';
+  if(days===1)return'Tomorrow';
+  return`In ${days} days`;
+}
 function renderDetailContent(p){
   const isAXS=p.leadType==='axs';
-  const histHtml=(p.followUpHistory||[]).slice().reverse().map(h=>`<div class="fu-entry"><span class="fu-entry-date">${esc(h.date)}</span> — ${esc(h.note)}</div>`).join('')||`<div style="color:var(--dim);font-size:11px;padding:3px 0">No history yet</div>`;
+  const ICONS={followup:'📅',note:'📝',appt:'📆',status:'🔄'};
+  const histHtml=(p.followUpHistory||[]).slice().reverse().map(h=>{
+    const icon=h.type==='appt'?ICONS.appt:h.type==='note'?ICONS.note:h.type==='status'?ICONS.status:ICONS.followup;
+    return`<div class="fu-entry"><span class="fu-entry-icon">${icon}</span><span class="fu-entry-date">${esc(h.date)}</span><span style="flex:1">${esc(h.note)}</span></div>`;
+  }).join('')||`<div style="color:var(--dim);font-size:11px;padding:3px 0;font-style:italic">No history yet — changes to follow-up date and manual notes appear here.</div>`;
+  const ac=apptClass(p.appointmentDate);
+  const al=apptLabel(p.appointmentDate);
+  const apptAlert=ac?`<div class="appt-indicator ${ac}"><span class="appt-ping" style="background:currentColor"></span>${esc(p.appointmentDate)} · ${al}</div>`:'';
+
   document.getElementById('detailInner').innerHTML=`
     <button class="d-close" onclick="window._closeDetail()">✕</button>
     <div class="d-name">${esc(p.name)}</div>
@@ -980,10 +1030,24 @@ function renderDetailContent(p){
       </div>
     </div>
     <div class="d-section">
-      <div class="d-section-title">Follow-up</div>
-      <div class="field-row single"><div class="fg"><label>Follow-up Date</label><input id="d_followup" type="date" value="${p.followUpDate||''}"/></div></div>
-      <div style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">History</div>
+      <div class="d-section-title">Follow-up &amp; Appointment</div>
+      <div class="field-row">
+        <div class="fg">
+          <label>Follow-up Date <span style="color:var(--dim);font-weight:400">(remind me to call)</span></label>
+          <input id="d_followup" type="date" value="${p.followUpDate||''}"/>
+        </div>
+        <div class="fg">
+          <label>Appointment Date <span style="color:var(--dim);font-weight:400">(meeting confirmed)</span></label>
+          <input id="d_appt" type="date" value="${p.appointmentDate||''}"/>
+        </div>
+      </div>
+      ${apptAlert}
+      <div style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Activity Log <span style="font-weight:400;text-transform:none;letter-spacing:0"> — auto-logs date changes; add notes manually below</span></div>
       <div class="fu-history">${histHtml}</div>
+      <div class="note-add-row">
+        <input class="note-add-input" id="d_note_input" placeholder="Add a note (e.g. called, no answer, will retry Thu)…"/>
+        <button class="note-add-btn" onclick="window._addNote('${p.id}')">+ Note</button>
+      </div>
     </div>
     ${isAXS?`<div class="d-section"><div class="d-section-title">AXS Profile</div>
       <div class="field-row single"><div class="fg"><label>Savings Bracket</label><select id="d_savings"><option value="" ${!p.savings?'selected':''}>—</option>${SAVINGS_OPTS.map(s=>`<option value="${s}" ${p.savings===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
@@ -1002,17 +1066,31 @@ function renderDetailContent(p){
 window._saveDetail=async(id,type)=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const newFU=document.getElementById('d_followup').value;
+  const newAppt=document.getElementById('d_appt').value;
   let hist=[...(p.followUpHistory||[])];
   if(newFU!==(p.followUpDate||'')){
-    const note=p.followUpDate?`Changed from ${p.followUpDate} → ${newFU||'cleared'}`:`Set to ${newFU}`;
-    hist.push({date:today(),note,updatedAt:new Date().toISOString()});
+    const note=p.followUpDate?`Follow-up changed: ${p.followUpDate} → ${newFU||'cleared'}`:`Follow-up set to ${newFU}`;
+    hist.push({date:today(),note,type:'followup',updatedAt:new Date().toISOString()});
   }
-  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,followUpDate:newFU,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
+  if(newAppt!==(p.appointmentDate||'')){
+    const note=p.appointmentDate?`Appointment changed: ${p.appointmentDate} → ${newAppt||'cleared'}`:`Appointment set for ${newAppt}`;
+    hist.push({date:today(),note,type:'appt',updatedAt:new Date().toISOString()});
+  }
+  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
   if(type==='axs'){upd.savings=document.getElementById('d_savings').value;upd.priorities=document.getElementById('d_priorities').value.trim();}
   else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
   await updateProspect(id,upd);
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
   toast('Saved ✓');
+};
+
+window._addNote=async(id)=>{
+  const inp=document.getElementById('d_note_input');
+  const note=(inp?.value||'').trim();if(!note){inp?.focus();return;}
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const hist=[...(p.followUpHistory||[]),{date:today(),note,type:'note',updatedAt:new Date().toISOString()}];
+  await updateProspect(id,{followUpHistory:hist});
+  const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
 };
 window._convert=id=>{const p=prospects.find(x=>x.id===id);if(p)convertToClient(p);};
 window._delete=id=>deleteProspect(id);
@@ -1140,6 +1218,13 @@ window._confirmImport=async()=>{
   const el=document.getElementById(id);if(!el)return;
   el.addEventListener('input',()=>{if(currentView==='prospects')renderAll();});
   el.addEventListener('change',()=>{if(currentView==='prospects')renderAll();});
+});
+
+// Enter on note input submits the note
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.id==='d_note_input'&&selectedId){
+    e.preventDefault();window._addNote(selectedId);
+  }
 });
 
 // ── Keyboard navigation ──

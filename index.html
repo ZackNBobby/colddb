@@ -157,11 +157,25 @@
       display:flex;align-items:center;gap:6px;
       background:rgba(10,20,36,0.7);border:1px solid var(--border);
       border-radius:8px;padding:5px 12px;font-size:12px;white-space:nowrap;
-      cursor:pointer;transition:all .2s;
+      cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
     }
     .stat-chip:hover{border-color:var(--gold-border);background:var(--gold-glow);transform:translateY(-1px);}
     .stat-chip .num{font-weight:800;font-size:14px;}
     .stat-chip.total-chip{border-color:rgba(255,255,255,.1);}
+    .stat-chip.active{animation:chipPulse 2s ease-in-out infinite;}
+    @keyframes chipPulse{
+      0%,100%{transform:translateY(0);box-shadow:0 0 0 0 var(--chip-glow,rgba(240,165,0,.4));}
+      50%{transform:translateY(-2px);box-shadow:0 0 14px 3px var(--chip-glow,rgba(240,165,0,.2));}
+    }
+    .stat-chip.active::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.06) 50%,transparent 100%);
+      animation:chipShimmer 2s ease-in-out infinite;
+    }
+    @keyframes chipShimmer{
+      0%{transform:translateX(-100%);}
+      60%,100%{transform:translateX(100%);}
+    }
 
     /* ── Main ── */
     .main{display:flex;flex:1;overflow:hidden;}
@@ -630,19 +644,24 @@ function renderAll(){renderStats();renderList();}
 function renderStats(){
   const counts={};STATUSES.forEach(s=>counts[s]=0);
   prospects.forEach(p=>{if(counts[p.status]!==undefined)counts[p.status]++;});
+  const activeStatus=document.getElementById('fStatus').value;
   let html=`<div class="stat-chip total-chip"><span class="num" style="color:var(--muted)">${prospects.length}</span>&nbsp;<span style="color:var(--dim)">Total</span></div>`;
   STATUSES.forEach(s=>{
     const c=STATUS_COLOR[s];
-    html+=`<div class="stat-chip" style="border-color:${c}22" onclick="window._filterStatus('${s}')">
+    const isActive=activeStatus===s;
+    html+=`<div class="stat-chip${isActive?' active':''}"
+      style="border-color:${isActive?c:c+'22'};background:${isActive?c+'1a':'rgba(10,20,36,0.7)'};--chip-glow:${c}55"
+      onclick="window._filterStatus('${s}')">
       <span class="num" style="color:${c}">${counts[s]}</span>
-      <span style="color:${c}aa">${s}</span>
+      <span style="color:${isActive?c:c+'aa'}">${s}</span>
     </div>`;
   });
   document.getElementById('statsRow').innerHTML=html;
 }
 window._filterStatus=s=>{
   const el=document.getElementById('fStatus');
-  el.value=el.value===s?'':s;renderList();
+  el.value=el.value===s?'':s;
+  renderAll();
 };
 
 function renderList(){

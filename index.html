@@ -198,10 +198,12 @@
     .prospect-table th:nth-child(11){width:28px;text-align:center;}
     .prospect-table th:nth-child(12){width:28px;text-align:center;}
     .prospect-table th:nth-child(13){width:28px;text-align:center;}
+    .prospect-table th:nth-child(14){width:28px;text-align:center;}
     .prospect-table td:nth-child(10){text-align:center;}
     .prospect-table td:nth-child(11){text-align:center;}
     .prospect-table td:nth-child(12){text-align:center;}
     .prospect-table td:nth-child(13){text-align:center;}
+    .prospect-table td:nth-child(14){text-align:center;}
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .25s ease both;position:relative;}
     .prospect-table tbody tr:hover td{background:rgba(240,165,0,.04);}
     .prospect-table tbody tr:hover td:first-child{border-left:2px solid rgba(240,165,0,.3);}
@@ -268,6 +270,8 @@
     .tgl-amber input:checked~.tgl-box::after{border-color:#fbbf24;}
     .tgl-green input:checked~.tgl-box{background:rgba(74,222,128,.15);border-color:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.2);}
     .tgl-green input:checked~.tgl-box::after{border-color:#4ade80;}
+    .tgl-gold input:checked~.tgl-box{background:rgba(240,165,0,.18);border-color:var(--gold);box-shadow:0 0 8px rgba(240,165,0,.25);}
+    .tgl-gold input:checked~.tgl-box::after{border-color:var(--gold);}
     .fu-date{font-size:11px;color:var(--dim);}
     .fu-today{color:var(--amber);font-weight:700;}
     .fu-overdue{color:var(--red);font-weight:700;}
@@ -460,6 +464,7 @@
                 <th title="Meeting set">📅</th>
                 <th title="Met in person">🤝</th>
                 <th title="Converted / purchased">✅</th>
+                <th title="Referral from client">⭐</th>
               </tr>
             </thead>
             <tbody id="prospectTbody"></tbody>
@@ -966,8 +971,9 @@ function renderList(){
         onclick="window._select('${p.id}')"
         ${hasNotes?`onmouseenter="window._showTip(event,'${esc(p.extraNotes?.replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
       <td>
-        <div class="p-name">${esc(p.name)}</div>
+        <div class="p-name">${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
+        ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
       </td>
       <td>
         <a class="wa-link" href="${waLink(p.phone)}" target="_blank" onclick="event.stopPropagation()" title="Open WhatsApp">${esc(p.phone||'—')}</a>
@@ -988,6 +994,7 @@ function renderList(){
       <td onclick="event.stopPropagation()"><label class="tgl tgl-purple" title="Meeting set"><input type="checkbox" ${p.meetingSet?'checked':''} onchange="window._flag('${p.id}','meetingSet',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-amber" title="Met in person"><input type="checkbox" ${p.met?'checked':''} onchange="window._flag('${p.id}','met',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-green" title="Converted / purchased"><input type="checkbox" ${p.purchased?'checked':''} onchange="window._flag('${p.id}','purchased',this.checked)"/><span class="tgl-box"></span></label></td>
+      <td onclick="event.stopPropagation()"><label class="tgl tgl-gold" title="Referral from client"><input type="checkbox" ${p.referral?'checked':''} onchange="window._flag('${p.id}','referral',this.checked)"/><span class="tgl-box"></span></label></td>
     </tr>`;
   }).join('');
 }
@@ -1141,6 +1148,15 @@ function renderDetailContent(p){
     :`<div class="d-section"><div class="d-section-title">Existing Policies</div>
       <div class="field-row single"><div class="fg"><label>Policy / Policies</label><textarea id="d_policies" rows="2">${esc(p.policies||'')}</textarea></div></div>
       <div class="field-row single"><div class="fg"><label>Premium / Year (skip Shield/Hospital)</label><input id="d_premium" placeholder="e.g. $1,234 / 2009" value="${esc(p.premiumPerYear||'')}"/></div></div></div>`}
+    <div class="d-section">
+      <div class="d-section-title">Referral</div>
+      <div class="check-row" style="margin-bottom:9px">
+        <label class="check-label"><input type="checkbox" id="d_referral" ${p.referral?'checked':''} onchange="document.getElementById('d_referral_wrap').style.display=this.checked?'':'none'"/> <span style="color:var(--gold)">⭐ Referred by a client</span></label>
+      </div>
+      <div class="field-row single" id="d_referral_wrap" style="${p.referral?'':'display:none'}">
+        <div class="fg"><label>Referred by <span style="color:var(--dim);font-weight:400">(client name)</span></label><input id="d_referredby" placeholder="e.g. John Tan" value="${esc(p.referredBy||'')}"/></div>
+      </div>
+    </div>
     <div class="d-section"><div class="d-section-title">Notes</div><div class="field-row single"><div class="fg"><textarea id="d_notes" rows="3">${esc(p.extraNotes||'')}</textarea></div></div></div>
     <div class="d-actions">
       <button class="btn btn-save" onclick="window._saveDetail('${p.id}','${isAXS?'axs':'ekko'}')">Save</button>
@@ -1162,7 +1178,7 @@ window._saveDetail=async(id,type)=>{
     const note=p.appointmentDate?`Appointment changed: ${p.appointmentDate} → ${newAppt||'cleared'}`:`Appointment set for ${newAppt}`;
     hist.push({date:today(),note,type:'appt',updatedAt:new Date().toISOString()});
   }
-  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
+  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,referredBy:document.getElementById('d_referredby')?.value.trim()||'',followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
   if(type==='axs'){upd.savings=document.getElementById('d_savings').value;upd.priorities=document.getElementById('d_priorities').value.trim();}
   else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
   await updateProspect(id,upd);

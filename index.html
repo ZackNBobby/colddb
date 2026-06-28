@@ -664,37 +664,55 @@ function renderDashboard(){
 }
 
 function renderHeroStats(){
-  const total=prospects.length;
-  const converted=prospects.filter(p=>p.status==='Converted'||p.purchased).length;
-  const met=prospects.filter(p=>p.status==='Met'||p.met).length;
-  const contacted=prospects.filter(p=>['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
-  const convRate=total?((converted/total)*100).toFixed(1):0;
-  const contactRate=total?((contacted/total)*100).toFixed(1):0;
+  const fc=getFunnelCounts(prospects);
+  const convRate=fc.total?((fc.converted/fc.total)*100).toFixed(1):0;
+  const meetRate=fc.called?((fc.met/fc.called)*100).toFixed(1):0;
   document.getElementById('dashHero').innerHTML=`
-    <div class="hero-card"><div class="hero-label">Total Leads</div><div class="hero-value">${total}</div><div class="hero-sub">across ${batches.length} batches</div></div>
-    <div class="hero-card"><div class="hero-label">Contacted</div><div class="hero-value">${contacted}</div><div class="hero-sub">${contactRate}% contact rate</div></div>
-    <div class="hero-card"><div class="hero-label">Meetings</div><div class="hero-value">${met}</div><div class="hero-sub">met in person</div></div>
-    <div class="hero-card"><div class="hero-label">Converted</div><div class="hero-value">${converted}</div><div class="hero-sub">${convRate}% conversion rate</div></div>
+    <div class="hero-card"><div class="hero-label">Total Leads</div><div class="hero-value">${fc.total}</div><div class="hero-sub">across ${batches.length} batches</div></div>
+    <div class="hero-card"><div class="hero-label">Called</div><div class="hero-value">${fc.called}</div><div class="hero-sub">${fc.total?((fc.called/fc.total)*100).toFixed(1):0}% of all leads</div></div>
+    <div class="hero-card"><div class="hero-label">Met</div><div class="hero-value">${fc.met}</div><div class="hero-sub">${meetRate}% of those called</div></div>
+    <div class="hero-card"><div class="hero-label">Converted</div><div class="hero-value">${fc.converted}</div><div class="hero-sub">${convRate}% overall conversion</div></div>
   `;
 }
 
+// Cumulative funnel — each stage counts everyone who HAS REACHED OR PASSED it,
+// using actual field data so the numbers stay correct regardless of status label.
+function getFunnelCounts(arr){
+  const total=arr.length;
+  const called=arr.filter(p=>(p.calledCount||0)>0||['Called','Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
+  const contacted=arr.filter(p=>['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
+  const apptSet=arr.filter(p=>p.appointmentDate||['Meeting Set','Met','Converted'].includes(p.status)).length;
+  const met=arr.filter(p=>p.met||['Met','Converted'].includes(p.status)).length;
+  const converted=arr.filter(p=>p.purchased||p.status==='Converted').length;
+  const cold=arr.filter(p=>p.status==='Cold').length;
+  const cancelled=arr.filter(p=>p.status==='Cancelled').length;
+  return{total,called,contacted,apptSet,met,converted,cold,cancelled};
+}
+
 function renderFunnel(){
-  const counts={};STATUSES.forEach(s=>counts[s]=0);
-  prospects.forEach(p=>{if(counts[p.status]!==undefined)counts[p.status]++;});
-  const total=prospects.length||1;
-  const colors={New:'#6b7a8d',Called:'#60a5fa',Contacted:'#2dd4bf','Meeting Set':'#c084fc',Met:'#fbbf24',Converted:'#4ade80'};
-  document.getElementById('funnelWrap').innerHTML=FUNNEL_STATUSES.map(s=>{
-    const n=counts[s],pct=((n/total)*100).toFixed(1);
-    const barW=Math.max((n/total)*100,n>0?1.5:0);
+  const fc=getFunnelCounts(prospects);
+  const rows=[
+    {label:'Total',n:fc.total,color:'#6b7a8d',sub:'all prospects'},
+    {label:'Called',n:fc.called,color:'#60a5fa',sub:'called at least once'},
+    {label:'Contacted',n:fc.contacted,color:'#2dd4bf',sub:'picked up / engaged'},
+    {label:'Appt Set',n:fc.apptSet,color:'#c084fc',sub:'appointment booked'},
+    {label:'Met',n:fc.met,color:'#fbbf24',sub:'actually met in person'},
+    {label:'Converted',n:fc.converted,color:'#4ade80',sub:'purchased / closed'},
+  ];
+  const base=fc.total||1;
+  document.getElementById('funnelWrap').innerHTML=rows.map(r=>{
+    const pct=((r.n/base)*100).toFixed(1);
+    const barW=Math.max((r.n/base)*100,r.n>0?1.5:0);
     return `<div class="funnel-row">
-      <div class="funnel-label" style="color:${colors[s]}">${s}</div>
-      <div class="funnel-bar-wrap">
-        <div class="funnel-bar" style="width:${barW}%;background:${colors[s]};"></div>
-      </div>
-      <div class="funnel-count" style="color:${colors[s]}">${n}</div>
-      <div class="funnel-pct">${pct}%</div>
+      <div class="funnel-label" style="color:${r.color}">${r.label}</div>
+      <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${barW}%;background:${r.color}"></div></div>
+      <div class="funnel-count" style="color:${r.color}">${r.n}</div>
+      <div class="funnel-pct" title="${r.sub}">${pct}%</div>
     </div>`;
-  }).join('');
+  }).join('')+(fc.cold||fc.cancelled?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:16px;font-size:11px;">
+    ${fc.cold?`<span style="color:#f87171">❄ Cold: ${fc.cold}</span>`:''}
+    ${fc.cancelled?`<span style="color:#6b7280">✕ Cancelled: ${fc.cancelled}</span>`:''}
+  </div>`:'');
 }
 
 function renderBatchGrid(){
@@ -703,21 +721,25 @@ function renderBatchGrid(){
   batches.forEach(b=>{
     const bProspects=prospects.filter(p=>p.batch===b.name);
     const total=bProspects.length;
-    const counts={};STATUSES.forEach(s=>counts[s]=0);
-    bProspects.forEach(p=>{if(counts[p.status]!==undefined)counts[p.status]++;});
-    const funnelRows=FUNNEL_STATUSES.map(s=>{
-      const n=counts[s],pct=total?((n/total)*100).toFixed(0):0;
-      const barW=total?Math.max((n/total)*100,n>0?4:0):0;
+    const fc=getFunnelCounts(bProspects);
+    const funnelDefs=[
+      {label:'Called',n:fc.called,color:'#60a5fa'},
+      {label:'Contacted',n:fc.contacted,color:'#2dd4bf'},
+      {label:'Appt Set',n:fc.apptSet,color:'#c084fc'},
+      {label:'Met',n:fc.met,color:'#fbbf24'},
+      {label:'Converted',n:fc.converted,color:'#4ade80'},
+    ];
+    const funnelRows=funnelDefs.map(r=>{
+      const barW=total?Math.max((r.n/total)*100,r.n>0?4:0):0;
       return `<div class="bfr">
-        <div class="bfr-label" style="color:${statusColors[s]}">${s}</div>
-        <div class="bfr-bar-wrap"><div class="bfr-bar" style="width:${barW}%;background:${statusColors[s]}"></div></div>
-        <div class="bfr-count" style="color:${statusColors[s]}">${n}</div>
+        <div class="bfr-label" style="color:${r.color}">${r.label}</div>
+        <div class="bfr-bar-wrap"><div class="bfr-bar" style="width:${barW}%;background:${r.color}"></div></div>
+        <div class="bfr-count" style="color:${r.color}">${r.n}</div>
       </div>`;
     }).join('');
-    const cold=counts['Cold']||0,cancelled=counts['Cancelled']||0;
-    const coldLine=cold||cancelled?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:12px;">
-      ${cold?`<span style="font-size:10px;color:${statusColors['Cold']}">Cold: ${cold}</span>`:''}
-      ${cancelled?`<span style="font-size:10px;color:${statusColors['Cancelled']}">Cancelled: ${cancelled}</span>`:''}
+    const coldLine=fc.cold||fc.cancelled?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:12px;">
+      ${fc.cold?`<span style="font-size:10px;color:#f87171">❄ Cold: ${fc.cold}</span>`:''}
+      ${fc.cancelled?`<span style="font-size:10px;color:#6b7280">✕ Cancelled: ${fc.cancelled}</span>`:''}
     </div>`:'';
     // Appointment ping
     const t=today();

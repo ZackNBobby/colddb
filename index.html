@@ -184,28 +184,42 @@
     .list-pane{flex:1;overflow-y:auto;min-width:0;background:transparent;}
     .list-pane::-webkit-scrollbar{width:5px;}
     .list-pane::-webkit-scrollbar-thumb{background:rgba(240,165,0,.15);border-radius:3px;}
-    .prospect-table{width:100%;border-collapse:collapse;}
+    .prospect-table{width:100%;border-collapse:collapse;table-layout:fixed;}
     .prospect-table th{
       position:sticky;top:0;
       background:rgba(4,9,18,0.95);backdrop-filter:blur(12px);
-      padding:7px 10px;text-align:left;font-size:10px;font-weight:700;
+      padding:7px 8px;text-align:left;font-size:10px;font-weight:700;
       color:var(--dim);text-transform:uppercase;letter-spacing:.07em;
       border-bottom:1px solid var(--border);white-space:nowrap;z-index:5;
+      overflow:hidden;
     }
     .prospect-table td{
-      padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);
+      padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);
       vertical-align:middle;font-size:12px;transition:background .12s;
-      background:transparent;
+      background:transparent;overflow:hidden;
     }
+    /* Fixed column widths */
+    .prospect-table th:nth-child(1){width:190px;}
+    .prospect-table th:nth-child(2){width:105px;}
+    .prospect-table th:nth-child(3){width:42px;}
+    .prospect-table th:nth-child(4){width:68px;}
+    .prospect-table th:nth-child(5){width:105px;}
+    .prospect-table th:nth-child(6){width:88px;}
+    .prospect-table th:nth-child(7){width:88px;}
+    .prospect-table th:nth-child(8){width:38px;text-align:center;}
+    .prospect-table th:nth-child(9){width:72px;text-align:center;}
+    .prospect-table td:nth-child(8){text-align:center;}
+    .prospect-table td:nth-child(9){text-align:center;}
+    /* Truncate long names */
+    .p-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .3s ease both;}
     .prospect-table tbody tr:hover td{background:rgba(240,165,0,.04);}
     .prospect-table tbody tr:hover td:first-child{border-left:2px solid rgba(240,165,0,.3);}
     .prospect-table tbody tr.selected td{background:rgba(240,165,0,.07);}
     .prospect-table tbody tr.selected td:first-child{border-left:2px solid var(--gold);}
     @keyframes rowIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
-    .p-name{font-weight:600;color:var(--text);}
-    .p-aka{font-size:11px;color:var(--dim);margin-top:2px;}
-    .p-phone{color:var(--muted);font-size:12px;}
+    .p-aka{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .p-phone{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
     .batch-tag{
       display:inline-block;background:rgba(14,24,40,.9);

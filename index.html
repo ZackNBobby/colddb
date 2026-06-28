@@ -108,10 +108,24 @@
     .batch-card-sub{font-size:11px;color:var(--dim);margin-bottom:10px;}
     .batch-funnel{display:flex;flex-direction:column;gap:4px;}
     .bfr{display:flex;align-items:center;gap:6px;}
-    .bfr-label{font-size:10px;font-weight:600;min-width:76px;text-align:right;white-space:nowrap;}
-    .bfr-bar-wrap{flex:1;height:10px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;}
+    .bfr{display:flex;align-items:center;gap:6px;}
+    .bfr-label{font-size:10px;font-weight:700;min-width:72px;text-align:right;white-space:nowrap;}
+    .bfr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .bfr-bar-wrap{flex:1;height:9px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;}
     .bfr-bar{height:100%;border-radius:4px;min-width:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
-    .bfr-count{font-size:10px;font-weight:700;min-width:22px;text-align:right;}
+    .bfr-count{font-size:10px;font-weight:800;min-width:18px;text-align:right;}
+    .bfr-pct{font-size:9px;color:var(--dim);min-width:28px;text-align:right;}
+    /* Mini funnel strip above table */
+    .funnel-strip{background:rgba(2,5,12,.75);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0;display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;}
+    .funnel-strip::-webkit-scrollbar{height:3px;}
+    .funnel-strip::-webkit-scrollbar-thumb{background:rgba(240,165,0,.15);border-radius:2px;}
+    .fs-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 14px;border-right:1px solid var(--border);white-space:nowrap;min-width:80px;position:relative;transition:background .15s;}
+    .fs-item:last-child{border-right:none;}
+    .fs-item::after{content:'›';position:absolute;right:-8px;color:var(--dim);font-size:11px;z-index:1;}
+    .fs-item:last-child::after{display:none;}
+    .fs-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);margin-bottom:2px;}
+    .fs-num{font-size:16px;font-weight:900;line-height:1;}
+    .fs-pct{font-size:10px;color:var(--dim);margin-top:1px;}
     .batch-card-actions{position:absolute;top:12px;right:12px;display:flex;gap:4px;opacity:0;transition:opacity .15s;}
     .batch-card:hover .batch-card-actions{opacity:1;}
     .appt-badge{position:absolute;top:10px;left:12px;display:flex;align-items:center;gap:5px;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700;border:1px solid;}
@@ -424,6 +438,7 @@
     </div>
 
     <div class="statsrow" id="statsRow"></div>
+    <div class="funnel-strip" id="funnelBar"></div>
 
     <div class="main">
       <div class="main-inner">
@@ -753,8 +768,10 @@ function renderBatchGrid(){
       const barW=total?Math.max((r.n/total)*100,r.n>0?4:0):0;
       return `<div class="bfr">
         <div class="bfr-label" style="color:${r.color}">${r.label}</div>
+        <div class="bfr-dot" style="background:${r.color}"></div>
         <div class="bfr-bar-wrap"><div class="bfr-bar" style="width:${barW}%;background:${r.color}"></div></div>
         <div class="bfr-count" style="color:${r.color}">${r.n}</div>
+        <div class="bfr-pct">${total?((r.n/total)*100).toFixed(0):0}%</div>
       </div>`;
     }).join('');
     const coldLine=fc.cold||fc.cancelled?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:12px;">
@@ -875,8 +892,29 @@ window._sort=col=>{
   renderList();
 };
 
+function renderFunnelBar(){
+  const bar=document.getElementById('funnelBar');if(!bar)return;
+  const src=activeBatch?prospects.filter(p=>p.batch===activeBatch):prospects;
+  const fc=getFunnelCounts(src);
+  const base=fc.total||1;
+  const stages=[
+    {label:'Total',n:fc.total,color:'#6b7a8d'},
+    {label:'Called',n:fc.called,color:'#60a5fa'},
+    {label:'Contacted',n:fc.contacted,color:'#2dd4bf'},
+    {label:'Appt Set',n:fc.apptSet,color:'#c084fc'},
+    {label:'Met',n:fc.met,color:'#fbbf24'},
+    {label:'Converted',n:fc.converted,color:'#4ade80'},
+  ];
+  bar.innerHTML=stages.map(s=>`
+    <div class="fs-item">
+      <div class="fs-label" style="color:${s.color}">${s.label}</div>
+      <div class="fs-num" style="color:${s.color}">${s.n}</div>
+      <div class="fs-pct">${((s.n/base)*100).toFixed(1)}%</div>
+    </div>`).join('');
+}
+
 function renderAll(){
-  if(currentView==='prospects'){renderStats();renderList();}
+  if(currentView==='prospects'){renderStats();renderFunnelBar();renderList();}
   else renderDashboard();
 }
 

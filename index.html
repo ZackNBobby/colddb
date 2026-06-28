@@ -183,6 +183,10 @@
     .prospect-table tbody tr:hover td:first-child{border-left:2px solid rgba(240,165,0,.3);}
     .prospect-table tbody tr.selected td{background:rgba(240,165,0,.07);}
     .prospect-table tbody tr.selected td:first-child{border-left:2px solid var(--gold);}
+    .prospect-table tbody tr.cancelled td{background:rgba(239,68,68,.05)!important;opacity:.6;}
+    .prospect-table tbody tr.cancelled .p-name{text-decoration:line-through;color:#f87171;}
+    .prospect-table tbody tr.cancelled .p-aka{text-decoration:line-through;}
+    .prospect-table tbody tr.cancelled td:first-child{border-left:2px solid rgba(239,68,68,.3)!important;}
     @keyframes rowIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:none;}}
 
     .p-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
@@ -841,7 +845,8 @@ function renderList(){
   const needsFollowUp=p=>p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';
   tbody.innerHTML=filtered.map((p,i)=>{
     const fuc=fuClass(p.followUpDate);
-    const sel=p.id===selectedId?'selected':'';
+    const isCancelled=p.status==='Cancelled';
+    const cls=[p.id===selectedId?'selected':'',isCancelled?'cancelled':''].filter(Boolean).join(' ');
     const isAXS=p.leadType==='axs';
     const gColor=p.gender==='M'?'#60a5fa':p.gender==='F'?'#f472b6':'var(--dim)';
     const policyText=isAXS?(p.savings||'—'):(p.policies||'—');
@@ -849,7 +854,7 @@ function renderList(){
     const followUpCell=needsFollowUp(p)
       ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p.followUpDate||'Set date!'}</span></span>`
       :`<span class="fu-date ${fuc}">${p.followUpDate||'—'}</span>`;
-    return `<tr class="${sel}" style="animation-delay:${Math.min(i*.025,.4)}s"
+    return `<tr class="${cls}" data-id="${p.id}" style="animation-delay:${Math.min(i*.025,.4)}s"
         onclick="window._select('${p.id}')"
         ${hasNotes?`onmouseenter="window._showTip(event,'${esc(p.extraNotes?.replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
       <td>
@@ -889,7 +894,18 @@ window._showTip=(e,notes)=>{
 window._hideTip=()=>{document.getElementById('notesTip').style.display='none';};
 
 // Actions
-window._select=id=>{selectedId=id;const p=prospects.find(x=>x.id===id);if(p){openDetail(p);renderList();}};
+window._select=id=>{
+  // Swap selected class without re-rendering the whole list
+  if(selectedId){
+    const old=document.querySelector(`tr[data-id="${selectedId}"]`);
+    if(old)old.classList.remove('selected');
+  }
+  selectedId=id;
+  const row=document.querySelector(`tr[data-id="${id}"]`);
+  if(row){row.classList.add('selected');row.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  const p=prospects.find(x=>x.id===id);
+  if(p)openDetail(p);
+};
 window._flag=async(id,field,val)=>{
   await updateProspect(id,{[field]:val});
   if(selectedId===id){const p=prospects.find(x=>x.id===id);if(p)renderDetailContent(p);}
@@ -927,7 +943,14 @@ window._quickStatus=(id,event)=>{
 
 // ── Detail panel ──
 function openDetail(p){document.getElementById('detailPane').classList.add('open');renderDetailContent(p);}
-function closeDetail(){document.getElementById('detailPane').classList.remove('open');selectedId=null;renderList();}
+function closeDetail(){
+  document.getElementById('detailPane').classList.remove('open');
+  if(selectedId){
+    const row=document.querySelector(`tr[data-id="${selectedId}"]`);
+    if(row)row.classList.remove('selected');
+  }
+  selectedId=null;
+}
 window._closeDetail=closeDetail;
 
 function renderDetailContent(p){
@@ -1119,15 +1142,31 @@ window._confirmImport=async()=>{
   el.addEventListener('change',()=>{if(currentView==='prospects')renderAll();});
 });
 
-// ── ESC ──
+// ── Keyboard navigation ──
 document.addEventListener('keydown',e=>{
-  if(e.key!=='Escape')return;
-  if(document.getElementById('batchModal')){document.getElementById('batchModal').remove();return;}
-  if(document.getElementById('importModal')){document.getElementById('importModal').remove();return;}
-  if(document.getElementById('addModal')){document.getElementById('addModal').remove();return;}
-  if(document.getElementById('statusPicker')){document.getElementById('statusPicker').remove();return;}
-  if(selectedId){closeDetail();return;}
-  if(currentView==='prospects'){showDashboard();return;}
+  // Escape — close modals / panel / go home
+  if(e.key==='Escape'){
+    if(document.getElementById('batchModal')){document.getElementById('batchModal').remove();return;}
+    if(document.getElementById('importModal')){document.getElementById('importModal').remove();return;}
+    if(document.getElementById('addModal')){document.getElementById('addModal').remove();return;}
+    if(document.getElementById('statusPicker')){document.getElementById('statusPicker').remove();return;}
+    if(selectedId){closeDetail();return;}
+    if(currentView==='prospects'){showDashboard();return;}
+    return;
+  }
+  // Arrow keys — navigate prospect list
+  if(currentView!=='prospects')return;
+  if(e.key!=='ArrowUp'&&e.key!=='ArrowDown')return;
+  // Don't hijack arrow keys when typing in an input/textarea
+  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
+  e.preventDefault();
+  const filtered=getSorted(getFiltered());
+  if(!filtered.length)return;
+  const curIdx=selectedId?filtered.findIndex(p=>p.id===selectedId):-1;
+  let nextIdx;
+  if(e.key==='ArrowDown')nextIdx=curIdx<filtered.length-1?curIdx+1:0;
+  else nextIdx=curIdx>0?curIdx-1:filtered.length-1;
+  window._select(filtered[nextIdx].id);
 });
 </script>
 </body>

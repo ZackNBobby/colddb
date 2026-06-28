@@ -200,17 +200,19 @@
       background:transparent;overflow:hidden;
     }
     /* Fixed column widths */
-    .prospect-table th:nth-child(1){width:190px;}
-    .prospect-table th:nth-child(2){width:105px;}
-    .prospect-table th:nth-child(3){width:42px;}
-    .prospect-table th:nth-child(4){width:68px;}
-    .prospect-table th:nth-child(5){width:105px;}
-    .prospect-table th:nth-child(6){width:88px;}
-    .prospect-table th:nth-child(7){width:88px;}
-    .prospect-table th:nth-child(8){width:38px;text-align:center;}
-    .prospect-table th:nth-child(9){width:72px;text-align:center;}
-    .prospect-table td:nth-child(8){text-align:center;}
-    .prospect-table td:nth-child(9){text-align:center;}
+    .prospect-table th:nth-child(1){width:160px;}  /* Name */
+    .prospect-table th:nth-child(2){width:95px;}   /* Phone */
+    .prospect-table th:nth-child(3){width:38px;}   /* Age */
+    .prospect-table th:nth-child(4){width:62px;}   /* Batch */
+    .prospect-table th:nth-child(5){width:42px;}   /* Gender */
+    .prospect-table th:nth-child(6){width:110px;}  /* Policies */
+    .prospect-table th:nth-child(7){width:100px;}  /* Status */
+    .prospect-table th:nth-child(8){width:78px;}   /* Called */
+    .prospect-table th:nth-child(9){width:82px;}   /* Follow-up */
+    .prospect-table th:nth-child(10){width:34px;text-align:center;} /* Met */
+    .prospect-table th:nth-child(11){width:62px;text-align:center;} /* Purchased */
+    .prospect-table td:nth-child(10){text-align:center;}
+    .prospect-table td:nth-child(11){text-align:center;}
     /* Truncate long names */
     .p-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .3s ease both;}
@@ -541,6 +543,8 @@
             <th>Phone</th>
             <th>Age</th>
             <th>Batch</th>
+            <th>G</th>
+            <th>Policies</th>
             <th>Status</th>
             <th>Called</th>
             <th>Follow-up</th>
@@ -745,6 +749,8 @@ function renderList(){
     const followUpCell = needsFollowUp(p)
       ? `<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p.followUpDate||'Set date!'}</span></span>`
       : `<span class="fu-date ${fuc}">${p.followUpDate||'—'}</span>`;
+    const genderColor=p.gender==='M'?'#60a5fa':p.gender==='F'?'#f472b6':'var(--dim)';
+    const policiesText=isAXS?(p.savings||'—'):(p.policies||'—');
     return `<tr class="${sel}" style="animation-delay:${Math.min(i*0.03,0.4)}s" onclick="window._select('${p.id}')">
       <td>
         <div class="p-name" style="font-size:13px">${esc(p.name)}</div>
@@ -753,6 +759,8 @@ function renderList(){
       <td class="p-phone">${esc(p.phone||'—')}</td>
       <td style="color:var(--muted)">${calcAge(p.birthYear)}</td>
       <td><span class="batch-tag ${isAXS?'axs-tag':''}">${esc(p.batch||'—')}</span></td>
+      <td style="color:${genderColor};font-weight:700;font-size:11px">${p.gender||'—'}</td>
+      <td style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px" title="${esc(policiesText)}">${esc(policiesText)}</td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
         <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>
       </td>
@@ -1211,10 +1219,10 @@ window._confirmImport=async()=>{
       }catch{fail++;}
     }));
   }
-  sortProspects();
   document.getElementById('importModal')?.remove();
-  pendingImport=[];renderAll();
+  pendingImport=[];
   toast(`Imported ${ok} prospects${fail?` (${fail} failed)`:''}  ✓`);
+  await loadProspects(); // reload from Firestore to get real timestamps for correct ordering
 };
 
 // ── Filters ──

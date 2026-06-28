@@ -49,10 +49,11 @@
     #app.visible{display:flex;}
 
     /* ── Topbar ── */
-    .topbar{background:rgba(4,9,18,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 1px 0 rgba(240,165,0,.08);}
+    .topbar{background:rgba(4,9,18,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 1px 0 rgba(240,165,0,.08);position:relative;}
     .topbar-logo{font-size:17px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;cursor:pointer;}
-    .topbar-crumb{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:6px;}
-    .topbar-crumb span{color:var(--muted);}
+    .topbar-crumb{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:8px;position:absolute;left:50%;transform:translateX(-50%);pointer-events:none;}
+    .topbar-crumb>*{pointer-events:auto;}
+    .topbar-crumb-batch{font-size:14px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
     .topbar-back{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--dim);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
     .topbar-back:hover{color:var(--text);border-color:var(--gold-border);}
     .topbar-sep{width:1px;height:18px;background:var(--border);margin:0 2px;}
@@ -685,7 +686,8 @@ function showProspects(batchName=''){
   document.getElementById('fPurchased').value='';
   const crumb=document.getElementById('topbarCrumb');
   crumb.innerHTML=`<button class="topbar-back" onclick="window._goHome()">← Dashboard</button>
-    ${batchName?`<span style="color:var(--dim)">/</span><span>${esc(batchName)}</span>`:'<span style="color:var(--dim)">/ All Prospects</span>'}`;
+    <span style="color:var(--dim);font-size:11px">/</span>
+    <span class="topbar-crumb-batch">${esc(batchName||'All Prospects')}</span>`;
   renderAll();
 }
 window._viewBatch=name=>showProspects(name);
@@ -727,22 +729,21 @@ function getFunnelCounts(arr){
 function renderFunnel(){
   const fc=getFunnelCounts(prospects);
   const rows=[
-    {label:'Total',n:fc.total,color:'#6b7a8d',sub:'all prospects'},
-    {label:'Called',n:fc.called,color:'#60a5fa',sub:'called at least once'},
-    {label:'Contacted',n:fc.contacted,color:'#2dd4bf',sub:'picked up / engaged'},
-    {label:'Appt Set',n:fc.apptSet,color:'#c084fc',sub:'appointment booked'},
-    {label:'Met',n:fc.met,color:'#fbbf24',sub:'actually met in person'},
-    {label:'Converted',n:fc.converted,color:'#4ade80',sub:'purchased / closed'},
+    {label:'Total',    n:fc.total,    base:fc.total,    color:'#6b7a8d',sub:'all prospects'},
+    {label:'Called',   n:fc.called,   base:fc.total,    color:'#60a5fa',sub:'% of total'},
+    {label:'Contacted',n:fc.contacted,base:fc.called,   color:'#2dd4bf',sub:'% of called'},
+    {label:'Appt Set', n:fc.apptSet,  base:fc.contacted,color:'#c084fc',sub:'% of contacted'},
+    {label:'Met',      n:fc.met,      base:fc.apptSet,  color:'#fbbf24',sub:'% of appt set'},
+    {label:'Converted',n:fc.converted,base:fc.met,      color:'#4ade80',sub:'% of met'},
   ];
-  const base=fc.total||1;
   document.getElementById('funnelWrap').innerHTML=rows.map(r=>{
-    const pct=((r.n/base)*100).toFixed(1);
-    const barW=Math.max((r.n/base)*100,r.n>0?1.5:0);
+    const pct=r.base?((r.n/r.base)*100).toFixed(1):'—';
+    const barW=fc.total?Math.max((r.n/fc.total)*100,r.n>0?1.5:0):0;
     return `<div class="funnel-row">
       <div class="funnel-label" style="color:${r.color}">${r.label}</div>
       <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${barW}%;background:${r.color}"></div></div>
       <div class="funnel-count" style="color:${r.color}">${r.n}</div>
-      <div class="funnel-pct" title="${r.sub}">${pct}%</div>
+      <div class="funnel-pct" title="${r.sub}">${pct==='—'?'—':pct+'%'}</div>
     </div>`;
   }).join('')+(fc.cold||fc.cancelled?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:16px;font-size:11px;">
     ${fc.cold?`<span style="color:#f87171">❄ Cold: ${fc.cold}</span>`:''}
@@ -758,20 +759,21 @@ function renderBatchGrid(){
     const total=bProspects.length;
     const fc=getFunnelCounts(bProspects);
     const funnelDefs=[
-      {label:'Called',n:fc.called,color:'#60a5fa'},
-      {label:'Contacted',n:fc.contacted,color:'#2dd4bf'},
-      {label:'Appt Set',n:fc.apptSet,color:'#c084fc'},
-      {label:'Met',n:fc.met,color:'#fbbf24'},
-      {label:'Converted',n:fc.converted,color:'#4ade80'},
+      {label:'Called',   n:fc.called,   base:fc.total,    color:'#60a5fa'},
+      {label:'Contacted',n:fc.contacted,base:fc.called,   color:'#2dd4bf'},
+      {label:'Appt Set', n:fc.apptSet,  base:fc.contacted,color:'#c084fc'},
+      {label:'Met',      n:fc.met,      base:fc.apptSet,  color:'#fbbf24'},
+      {label:'Converted',n:fc.converted,base:fc.met,      color:'#4ade80'},
     ];
     const funnelRows=funnelDefs.map(r=>{
       const barW=total?Math.max((r.n/total)*100,r.n>0?4:0):0;
+      const pct=r.base?((r.n/r.base)*100).toFixed(0)+'%':'—';
       return `<div class="bfr">
         <div class="bfr-label" style="color:${r.color}">${r.label}</div>
         <div class="bfr-dot" style="background:${r.color}"></div>
         <div class="bfr-bar-wrap"><div class="bfr-bar" style="width:${barW}%;background:${r.color}"></div></div>
         <div class="bfr-count" style="color:${r.color}">${r.n}</div>
-        <div class="bfr-pct">${total?((r.n/total)*100).toFixed(0):0}%</div>
+        <div class="bfr-pct">${pct}</div>
       </div>`;
     }).join('');
     const coldLine=fc.cold||fc.cancelled?`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:12px;">
@@ -896,21 +898,22 @@ function renderFunnelBar(){
   const bar=document.getElementById('funnelBar');if(!bar)return;
   const src=activeBatch?prospects.filter(p=>p.batch===activeBatch):prospects;
   const fc=getFunnelCounts(src);
-  const base=fc.total||1;
   const stages=[
-    {label:'Total',n:fc.total,color:'#6b7a8d'},
-    {label:'Called',n:fc.called,color:'#60a5fa'},
-    {label:'Contacted',n:fc.contacted,color:'#2dd4bf'},
-    {label:'Appt Set',n:fc.apptSet,color:'#c084fc'},
-    {label:'Met',n:fc.met,color:'#fbbf24'},
-    {label:'Converted',n:fc.converted,color:'#4ade80'},
+    {label:'Total',    n:fc.total,    base:fc.total,    color:'#6b7a8d'},
+    {label:'Called',   n:fc.called,   base:fc.total,    color:'#60a5fa'},
+    {label:'Contacted',n:fc.contacted,base:fc.called,   color:'#2dd4bf'},
+    {label:'Appt Set', n:fc.apptSet,  base:fc.contacted,color:'#c084fc'},
+    {label:'Met',      n:fc.met,      base:fc.apptSet,  color:'#fbbf24'},
+    {label:'Converted',n:fc.converted,base:fc.met,      color:'#4ade80'},
   ];
-  bar.innerHTML=stages.map(s=>`
-    <div class="fs-item">
+  bar.innerHTML=stages.map(s=>{
+    const pct=s.base?((s.n/s.base)*100).toFixed(1)+'%':'—';
+    return`<div class="fs-item">
       <div class="fs-label" style="color:${s.color}">${s.label}</div>
       <div class="fs-num" style="color:${s.color}">${s.n}</div>
-      <div class="fs-pct">${((s.n/base)*100).toFixed(1)}%</div>
-    </div>`).join('');
+      <div class="fs-pct">${pct}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderAll(){

@@ -451,6 +451,7 @@
           <option value="no">Not Purchased</option>
         </select>
       </div>
+      <input class="filter-input" id="fPolicies" type="text" placeholder="🔖 Policy…" style="width:130px;display:none"/>
       <span class="filter-count" id="filterCount"></span>
     </div>
 
@@ -468,7 +469,7 @@
                 <th onclick="window._sort('birthYear')">Age</th>
                 <th>Batch</th>
                 <th onclick="window._sort('gender')">G</th>
-                <th>Policies</th>
+                <th onclick="window._togglePolicyFilter()" style="cursor:pointer" title="Click to filter by policy">Policies</th>
                 <th onclick="window._sort('status')">Status</th>
                 <th onclick="window._sort('calledCount')">Called</th>
                 <th onclick="window._sort('followUpDate')">Follow-up</th>
@@ -909,6 +910,7 @@ function getFiltered(){
   const status=document.getElementById('fStatus')?.value||'';
   const gender=document.getElementById('fGender')?.value||'';
   const purch=document.getElementById('fPurchased')?.value||'';
+  const policyQ=document.getElementById('fPolicies')?.value.toLowerCase().trim()||'';
   return prospects.filter(p=>{
     if(activeBatch&&p.batch!==activeBatch)return false;
     if(search){const hay=`${p.name||''} ${p.phone||''} ${p.nric||''} ${p.preferredName||''}`.toLowerCase();if(!hay.includes(search))return false;}
@@ -929,6 +931,7 @@ function getFiltered(){
     if(gender&&p.gender!==gender)return false;
     if(purch==='yes'&&!p.purchased)return false;
     if(purch==='no'&&p.purchased)return false;
+    if(policyQ&&!(p.policies||'').toLowerCase().includes(policyQ))return false;
     return true;
   });
 }
@@ -1014,6 +1017,13 @@ function renderStats(){
 window._filterStatus=s=>{
   const el=document.getElementById('fStatus');
   el.value=el.value===s?'':s;renderAll();
+};
+window._togglePolicyFilter=()=>{
+  const el=document.getElementById('fPolicies');if(!el)return;
+  const visible=el.style.display!=='none';
+  el.style.display=visible?'none':'';
+  if(!visible){el.value='';el.focus();}
+  else{el.value='';renderAll();}
 };
 
 function renderList(){
@@ -1423,7 +1433,7 @@ window._confirmImport=async()=>{
 };
 
 // ── Filters ──
-['fSearch','fStatus','fGender','fPurchased'].forEach(id=>{
+['fSearch','fStatus','fGender','fPurchased','fPolicies'].forEach(id=>{
   const el=document.getElementById(id);if(!el)return;
   el.addEventListener('input',()=>{if(currentView==='prospects')renderAll();});
   el.addEventListener('change',()=>{if(currentView==='prospects')renderAll();});

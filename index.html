@@ -202,11 +202,13 @@
     .prospect-table th:nth-child(12){width:28px;text-align:center;}
     .prospect-table th:nth-child(13){width:28px;text-align:center;}
     .prospect-table th:nth-child(14){width:28px;text-align:center;}
+    .prospect-table th:nth-child(15){width:28px;text-align:center;}
     .prospect-table td:nth-child(10){text-align:center;}
     .prospect-table td:nth-child(11){text-align:center;}
     .prospect-table td:nth-child(12){text-align:center;}
     .prospect-table td:nth-child(13){text-align:center;}
     .prospect-table td:nth-child(14){text-align:center;}
+    .prospect-table td:nth-child(15){text-align:center;}
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .25s ease both;position:relative;}
     .prospect-table tbody tr:hover td{background:rgba(240,165,0,.04);}
     .prospect-table tbody tr:hover td:first-child{border-left:2px solid rgba(240,165,0,.3);}
@@ -272,6 +274,8 @@
     .tgl-amber input:checked~.tgl-box{background:rgba(251,191,36,.15);border-color:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.2);}
     .tgl-amber input:checked~.tgl-box::after{border-color:#fbbf24;}
     .tgl-green input:checked~.tgl-box{background:rgba(74,222,128,.15);border-color:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.2);}
+    .tgl-teal input:checked~.tgl-box{background:rgba(45,212,191,.15);border-color:#2dd4bf;box-shadow:0 0 8px rgba(45,212,191,.2);}
+    .tgl-teal input:checked~.tgl-box::after{border-color:#2dd4bf;}
     .tgl-green input:checked~.tgl-box::after{border-color:#4ade80;}
     .tgl-gold input:checked~.tgl-box{background:rgba(240,165,0,.18);border-color:var(--gold);box-shadow:0 0 8px rgba(240,165,0,.25);}
     .tgl-gold input:checked~.tgl-box::after{border-color:var(--gold);}
@@ -407,7 +411,12 @@
     <div class="dash-section-title">Conversion Funnel</div>
     <div class="funnel-wrap" id="funnelWrap"></div>
 
-    <div class="dash-section-title" style="margin-top:24px">
+    <div style="margin-bottom:20px;position:relative;">
+      <input class="filter-input" id="dashSearch" type="text" placeholder="🔍 Search across all batches…" oninput="window._dashSearch(this.value)" style="width:100%;box-sizing:border-box;"/>
+      <div id="dashSearchResults" style="display:none;margin-top:8px;background:rgba(6,13,24,.97);border:1px solid rgba(240,165,0,.15);border-radius:12px;overflow:hidden;max-height:360px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="dash-section-title" style="margin-top:4px">
       Batches
       <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;margin-left:8px" onclick="window._addBatch()">+ Add Batch</button>
     </div>
@@ -463,7 +472,8 @@
                 <th onclick="window._sort('status')">Status</th>
                 <th onclick="window._sort('calledCount')">Called</th>
                 <th onclick="window._sort('followUpDate')">Follow-up</th>
-                <th title="Picked up / reached">📞</th>
+                <th title="Called / picked up">📞</th>
+                <th title="Contacted (had a conversation)">💬</th>
                 <th title="Meeting set">📅</th>
                 <th title="Met in person">🤝</th>
                 <th title="Converted / purchased">✅</th>
@@ -663,7 +673,7 @@ function today(){return new Date().toISOString().slice(0,10);}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
 
 const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];
-const PIPELINE=['pickedUp','meetingSet','met','purchased']; // ordered earliest→latest
+const PIPELINE=['pickedUp','contacted','meetingSet','met','purchased']; // ordered earliest→latest
 const STATUS_COLOR={New:'#9aa3b0',Called:'#60a5fa',Contacted:'#2dd4bf','Meeting Set':'#c084fc',Met:'#fbbf24',Converted:'#4ade80',Cold:'#f87171',Cancelled:'#6b7280'};
 const FUNNEL_STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted'];
 const SAVINGS_OPTS=['Below S$999','S$1,000 - S$2,499','S$2,500 - S$3,999','Above S$4,000'];
@@ -672,6 +682,36 @@ function waLink(phone){const n=(phone||'').replace(/\D/g,'');return n?`https://w
 
 // ── Navigation ──
 window._goHome=()=>showDashboard();
+window._dashSearch=q=>{
+  const res=document.getElementById('dashSearchResults');if(!res)return;
+  const term=q.trim().toLowerCase();
+  if(!term){res.style.display='none';return;}
+  const hits=prospects.filter(p=>{
+    const hay=`${p.name||''} ${p.phone||''} ${p.nric||''} ${p.preferredName||''} ${p.batch||''}`.toLowerCase();
+    return hay.includes(term);
+  }).slice(0,30);
+  if(!hits.length){res.style.display='block';res.innerHTML='<div style="padding:14px 16px;color:var(--dim);font-size:13px">No results</div>';return;}
+  const isAXSBatch=b=>(batches.find(x=>x.name===b)||{}).type==='axs';
+  res.style.display='block';
+  res.innerHTML=hits.map(p=>{
+    const c=STATUS_COLOR[p.status]||'#9aa3b0';
+    const axs=isAXSBatch(p.batch);
+    return `<div onclick="window._dashGoTo('${p.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s" onmouseenter="this.style.background='rgba(240,165,0,.06)'" onmouseleave="this.style.background='transparent'">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'—')}${p.preferredName?` <span style="color:var(--dim);font-weight:400;font-size:11px">aka ${esc(p.preferredName)}</span>`:''}</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">${esc(p.phone||'')}${p.phone&&p.batch?' · ':''}<span class="batch-tag ${axs?'axs-tag':''}" style="font-size:9px">${esc(p.batch||'')}</span></div>
+      </div>
+      <span style="font-size:10px;font-weight:700;color:${c};background:${c}22;border-radius:5px;padding:2px 7px;flex-shrink:0">${esc(p.status||'New')}</span>
+    </div>`;
+  }).join('');
+};
+window._dashGoTo=id=>{
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const inp=document.getElementById('dashSearch');if(inp)inp.value='';
+  const res=document.getElementById('dashSearchResults');if(res)res.style.display='none';
+  showBatch(p.batch);
+  setTimeout(()=>window._select(id),120);
+};
 
 function showDashboard(){
   currentView='dashboard';
@@ -726,7 +766,7 @@ function renderHeroStats(){
 function getFunnelCounts(arr){
   const total=arr.length;
   const called=arr.filter(p=>p.pickedUp||(p.calledCount||0)>0||['Called','Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
-  const contacted=arr.filter(p=>['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
+  const contacted=arr.filter(p=>p.contacted||['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
   const apptSet=arr.filter(p=>p.meetingSet||p.appointmentDate||['Meeting Set','Met','Converted'].includes(p.status)).length;
   const met=arr.filter(p=>p.met||['Met','Converted'].includes(p.status)).length;
   const converted=arr.filter(p=>p.purchased||p.status==='Converted').length;
@@ -1007,7 +1047,8 @@ function renderList(){
         <span style="font-size:10px;color:var(--dim);margin-left:3px">${p.calledCount||0}x</span>
       </td>
       <td>${followUpCell}</td>
-      <td onclick="event.stopPropagation()"><label class="tgl tgl-blue" title="Picked up"><input type="checkbox" ${p.pickedUp?'checked':''} onchange="window._flag('${p.id}','pickedUp',this.checked)"/><span class="tgl-box"></span></label></td>
+      <td onclick="event.stopPropagation()"><label class="tgl tgl-blue" title="Called"><input type="checkbox" ${p.pickedUp?'checked':''} onchange="window._flag('${p.id}','pickedUp',this.checked)"/><span class="tgl-box"></span></label></td>
+      <td onclick="event.stopPropagation()"><label class="tgl tgl-teal" title="Contacted"><input type="checkbox" ${p.contacted?'checked':''} onchange="window._flag('${p.id}','contacted',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-purple" title="Meeting set"><input type="checkbox" ${p.meetingSet?'checked':''} onchange="window._flag('${p.id}','meetingSet',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-amber" title="Met in person"><input type="checkbox" ${p.met?'checked':''} onchange="window._flag('${p.id}','met',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-green" title="Converted / purchased"><input type="checkbox" ${p.purchased?'checked':''} onchange="window._flag('${p.id}','purchased',this.checked)"/><span class="tgl-box"></span></label></td>
@@ -1062,7 +1103,7 @@ window._flag=async(id,field,val)=>{
   if(row){
     const tds=row.querySelectorAll('td');
     const setChk=(tdIdx,f)=>{const inp=tds[tdIdx]?.querySelector('.tgl input');if(inp)inp.checked=!!p2[f];};
-    setChk(9,'pickedUp');setChk(10,'meetingSet');setChk(11,'met');setChk(12,'purchased');setChk(13,'referral');
+    setChk(9,'pickedUp');setChk(10,'contacted');setChk(11,'meetingSet');setChk(12,'met');setChk(13,'purchased');setChk(14,'referral');
     // Re-render follow-up cell if met/purchased changed (affects the pulse dot)
     if(pIdx>=0||field==='met'||field==='purchased'){
       const needsFU=p2.status==='Met'&&!p2.purchased;
@@ -1167,7 +1208,8 @@ function renderDetailContent(p){
       <div class="d-section-title">Status &amp; Tracking</div>
       <div class="field-row"><div class="fg"><label>Status</label><select id="d_status">${STATUSES.map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label>Times Called</label><input id="d_called" type="number" min="0" value="${p.calledCount||0}"/></div></div>
       <div class="check-row">
-        <label class="check-label"><input type="checkbox" id="d_pickedup" ${p.pickedUp?'checked':''}/> <span style="color:#60a5fa">Picked Up</span></label>
+        <label class="check-label"><input type="checkbox" id="d_pickedup" ${p.pickedUp?'checked':''}/> <span style="color:#60a5fa">Called</span></label>
+        <label class="check-label"><input type="checkbox" id="d_contacted" ${p.contacted?'checked':''}/> <span style="color:#2dd4bf">Contacted</span></label>
         <label class="check-label"><input type="checkbox" id="d_meetingset" ${p.meetingSet?'checked':''}/> <span style="color:#c084fc">Mtg Set</span></label>
         <label class="check-label"><input type="checkbox" id="d_met" ${p.met?'checked':''}/> <span style="color:#fbbf24">Met</span></label>
         <label class="check-label"><input type="checkbox" id="d_purchased" ${p.purchased?'checked':''}/> <span style="color:#4ade80">Converted</span></label>
@@ -1229,7 +1271,7 @@ window._saveDetail=async(id,type)=>{
     const note=p.appointmentDate?`Appointment changed: ${p.appointmentDate} → ${newAppt||'cleared'}`:`Appointment set for ${newAppt}`;
     hist.push({date:today(),note,type:'appt',updatedAt:new Date().toISOString()});
   }
-  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,referredBy:document.getElementById('d_referredby')?.value.trim()||'',followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
+  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,referredBy:document.getElementById('d_referredby')?.value.trim()||'',followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
   if(type==='axs'){upd.savings=document.getElementById('d_savings').value;upd.priorities=document.getElementById('d_priorities').value.trim();}
   else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
   await updateProspect(id,upd);

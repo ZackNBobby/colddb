@@ -985,14 +985,15 @@ function renderAll(){
 
 function renderStats(){
   const filtered=getFiltered();
-  const counts={};STATUSES.forEach(s=>counts[s]=0);
-  filtered.forEach(p=>{if(counts[p.status]!==undefined)counts[p.status]++;});
+  const fc=getFunnelCounts(filtered);
+  // Map each status chip to its cumulative funnel count so checkboxes are reflected
+  const chipN={'New':filtered.filter(p=>p.status==='New').length,'Called':fc.called,'Contacted':fc.contacted,'Meeting Set':fc.apptSet,'Met':fc.met,'Converted':fc.converted,'Cold':fc.cold,'Cancelled':fc.cancelled};
   const activeStatus=document.getElementById('fStatus')?.value||'';
   let html=`<div class="stat-chip" style="border-color:rgba(255,255,255,.1)"><span class="num" style="color:var(--muted)">${filtered.length}</span>&nbsp;<span style="color:var(--dim)">Total</span></div>`;
   STATUSES.forEach(s=>{
     const c=STATUS_COLOR[s],isActive=activeStatus===s;
     html+=`<div class="stat-chip${isActive?' active':''}" style="border-color:${isActive?c:c+'22'};background:${isActive?c+'1a':'rgba(10,20,36,.7)'};--chip-glow:${c}55" onclick="window._filterStatus('${s}')">
-      <span class="num" style="color:${c}">${counts[s]}</span><span style="color:${isActive?c:c+'aa'}">${s}</span></div>`;
+      <span class="num" style="color:${c}">${chipN[s]??0}</span><span style="color:${isActive?c:c+'aa'}">${s}</span></div>`;
   });
   document.getElementById('statsRow').innerHTML=html;
 }

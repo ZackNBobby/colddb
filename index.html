@@ -912,7 +912,20 @@ function getFiltered(){
   return prospects.filter(p=>{
     if(activeBatch&&p.batch!==activeBatch)return false;
     if(search){const hay=`${p.name||''} ${p.phone||''} ${p.nric||''} ${p.preferredName||''}`.toLowerCase();if(!hay.includes(search))return false;}
-    if(status&&p.status!==status)return false;
+    if(status){
+      const st=p.status||'New';
+      let match=false;
+      if(status==='New')match=st==='New';
+      else if(status==='Called')match=p.pickedUp||(p.calledCount||0)>0||['Called','Contacted','Meeting Set','Met','Converted'].includes(st);
+      else if(status==='Contacted')match=p.contacted||['Contacted','Meeting Set','Met','Converted'].includes(st);
+      else if(status==='Meeting Set')match=p.meetingSet||!!p.appointmentDate||['Meeting Set','Met','Converted'].includes(st);
+      else if(status==='Met')match=p.met||['Met','Converted'].includes(st);
+      else if(status==='Converted')match=p.purchased||st==='Converted';
+      else if(status==='Cold')match=st==='Cold';
+      else if(status==='Cancelled')match=st==='Cancelled';
+      else match=st===status;
+      if(!match)return false;
+    }
     if(gender&&p.gender!==gender)return false;
     if(purch==='yes'&&!p.purchased)return false;
     if(purch==='no'&&p.purchased)return false;

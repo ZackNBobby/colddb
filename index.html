@@ -1189,12 +1189,12 @@ async function saveNewProspect(data){
   }catch(e){toast('Error: '+e.message);}
 }
 
-async function updateProspect(id,data){
+async function updateProspect(id,data,skipRender=false){
   try{
     await updateDoc(doc(db,'prospects',id),{...data,updatedAt:serverTimestamp()});
     const idx=prospects.findIndex(p=>p.id===id);
     if(idx>=0)prospects[idx]={...prospects[idx],...data};
-    renderList();
+    if(!skipRender)renderList();
   }catch(e){toast('Error: '+e.message);}
 }
 
@@ -1792,7 +1792,7 @@ function renderList(){
       </td>
       <td>
         <span class="call-btn" onclick="event.stopPropagation();window._addCall('${p.id}')">📞 +1</span>
-        <span style="font-size:10px;color:var(--dim);margin-left:3px">${p.calledCount||0}x</span>
+        <span class="call-count" style="font-size:10px;color:var(--dim);margin-left:3px">${p.calledCount||0}x</span>
       </td>
       <td>${followUpCell}</td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-blue" title="Called"><input type="checkbox" ${p.pickedUp?'checked':''} onchange="window._flag('${p.id}','pickedUp',this.checked)"/><span class="tgl-box"></span></label></td>
@@ -1870,7 +1870,10 @@ window._flag=async(id,field,val)=>{
 window._addCall=async id=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const c=(p.calledCount||0)+1;
-  await updateProspect(id,{calledCount:c,status:p.status==='New'?'Called':p.status});
+  await updateProspect(id,{calledCount:c,status:p.status==='New'?'Called':p.status},true);
+  // Patch just the count cell — no full re-render
+  const row=document.querySelector(`tr[data-id="${id}"]`);
+  if(row)row.querySelector('.call-count').textContent=`${c}x`;
   if(selectedId===id){const upd=prospects.find(x=>x.id===id);if(upd)renderDetailContent(upd);}
   renderStats();
 };

@@ -1362,6 +1362,113 @@ async function syncToGoogleCalendar(prospect){
   }catch(e){console.warn('Calendar sync:',e);toast('⚠️ Calendar: '+(e.message||e));}
 }
 
+async function syncApptToGoogleCalendar(prospect,apptDate,apptTime,location){
+  try{
+    const token=await _getGTasksToken();
+    const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
+    const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
+    const batchTag=prospect.batch?` (${prospect.batch})`:'';
+    const summary=`${fullName}${batchTag} - 1`;
+    const [h,m]=apptTime.split(':').map(Number);
+    const endMin=h*60+m+60;
+    const endH=String(Math.floor(endMin/60)%24).padStart(2,'0');
+    const endM=String(endMin%60).padStart(2,'0');
+    const endDate=endMin>=1440?new Date(new Date(apptDate).getTime()+86400000).toISOString().slice(0,10):apptDate;
+    const event={
+      summary,
+      location,
+      description:prospect.phone||'',
+      colorId:'5', // Banana
+      start:{dateTime:`${apptDate}T${apptTime}:00`,timeZone:'Asia/Singapore'},
+      end:{dateTime:`${endDate}T${endH}:${endM}:00`,timeZone:'Asia/Singapore'},
+      reminders:{useDefault:false,overrides:[{method:'popup',minutes:1440}]} // 1 day before
+    };
+    const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+    if(prospect.googleApptEventId){
+      await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${prospect.googleApptEventId}`,{method:'PUT',headers,body:JSON.stringify(event)});
+    }else{
+      const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{method:'POST',headers,body:JSON.stringify(event)});
+      const ev=await res.json();
+      if(ev.id)await updateProspect(prospect.id,{googleApptEventId:ev.id},true);
+    }
+    toast('📅 Appointment added to Calendar ✓');
+  }catch(e){console.warn('Appt calendar sync:',e);toast('⚠️ Calendar: '+(e.message||e));}
+}
+
+window._apptModal=(pid)=>{
+  const p=prospects.find(x=>x.id===pid);if(!p)return;
+  const existing=document.getElementById('apptModal');if(existing)existing.remove();
+  const isAXS=(p.batch||'').toLowerCase().includes('axs');
+  const sal=p.gender==='M'?'Mr':p.gender==='F'?'Ms':'';
+  const displayName=`${sal} ${p.preferredName||p.name}`.trim();
+  const ov=document.createElement('div');
+  ov.className='modal-bg';ov.id='apptModal';
+  ov.innerHTML=`<div class="modal" style="max-width:440px" onclick="event.stopPropagation()">
+    <h2>📅 Set Appointment — ${esc(displayName)}</h2>
+    <div style="display:grid;gap:14px">
+      <div>
+        <label class="field-label">Date</label>
+        <input class="field-input" id="appt_date" type="date" value="${p.appointmentDate||''}" style="color-scheme:dark"/>
+      </div>
+      <div>
+        <label class="field-label">Time</label>
+        <input class="field-input" id="appt_time" type="time" value="${p.appointmentDate?'':''}" style="color-scheme:dark"/>
+      </div>
+      <div>
+        <label class="field-label">Location</label>
+        <input class="field-input" id="appt_loc" type="text" value="Our Office" placeholder="e.g. Our Office, Starbucks..."/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('apptModal').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="window._confirmAppt('${pid}','${isAXS?'axs':'ekko'}')">Confirm & Send WhatsApp</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.getElementById('appt_date').focus();
+};
+
+window._confirmAppt=async(pid,type)=>{
+  const apptDate=document.getElementById('appt_date').value;
+  const apptTime=document.getElementById('appt_time').value;
+  const location=document.getElementById('appt_loc').value.trim()||'Our Office';
+  if(!apptDate){toast('Please pick a date');return;}
+  if(!apptTime){toast('Please pick a time');return;}
+  document.getElementById('apptModal').remove();
+  const p=prospects.find(x=>x.id===pid);if(!p)return;
+  // Format date nicely for WhatsApp message
+  const dateFmt=new Date(apptDate+'T12:00:00').toLocaleDateString('en-SG',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const [hh,mm]=apptTime.split(':');
+  const h12=((parseInt(hh)%12)||12);
+  const ampm=parseInt(hh)<12?'AM':'PM';
+  const timeFmt=`${h12}:${mm} ${ampm}`;
+  // Save appointment to Firestore + update status
+  await updateProspect(pid,{
+    appointmentDate:apptDate,appointmentTime:apptTime,appointmentLocation:location,
+    status:'Meeting Set',meetingSet:true,lastCalledDate:today()
+  },true);
+  // Patch table row
+  const row=document.querySelector(`tr[data-id="${pid}"]`);
+  if(row){
+    const badge=row.querySelector('.status-badge');
+    if(badge){badge.textContent='Meeting Set';badge.className=`status-badge ${statusCls('Meeting Set')}`;}
+    const lc=row.querySelector('.last-called');if(lc)lc.textContent='Today';
+  }
+  if(selectedId===pid){const p2=prospects.find(x=>x.id===pid);if(p2)renderDetailContent(p2);}
+  // Send WhatsApp with filled template
+  const tplKey=(type==='axs'?'axs':'ekko')+'_appt';
+  const tpl=msgTemplates[tplKey]||'';
+  if(tpl){
+    const msg=resolveTemplate(tpl,p,{date:dateFmt,time:timeFmt,location});
+    const n=(p.phone||'').replace(/\D/g,'');
+    if(n)window.open(`https://wa.me/65${n}?text=${encodeURIComponent(msg)}`,'_blank');
+  }else{toast('No appt template set — click 💬 to add one.');}
+  // Sync to Google Calendar
+  const p2=prospects.find(x=>x.id===pid)||{...p,appointmentDate:apptDate};
+  syncApptToGoogleCalendar(p2,apptDate,apptTime,location);
+};
+
 const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];
 const PIPELINE=['pickedUp','contacted','meetingSet','met','purchased']; // ordered earliest→latest
 const STATUS_COLOR={New:'#9aa3b0',Called:'#60a5fa',Contacted:'#2dd4bf','Meeting Set':'#c084fc',Met:'#fbbf24',Converted:'#4ade80',Cold:'#f87171',Cancelled:'#6b7280'};
@@ -1370,10 +1477,16 @@ const SAVINGS_OPTS=['Below S$999','S$1,000 - S$2,499','S$2,500 - S$3,999','Above
 function statusCls(s){return 's-'+(s||'New').replace(/\s/g,'');}
 function waLink(phone){const n=(phone||'').replace(/\D/g,'');return n?`https://wa.me/65${n}`:'#';}
 
-function resolveTemplate(tpl,p){
+function resolveTemplate(tpl,p,extra={}){
   const sal=p.gender==='M'?'Mr':p.gender==='F'?'Ms':'';
   const name=p.preferredName||p.name||'';
-  return tpl.replace(/\{salutation\}/g,sal).replace(/\{name\}/g,name).trim();
+  return tpl
+    .replace(/\{salutation\}/g,sal)
+    .replace(/\{name\}/g,name)
+    .replace(/\{date\}/g,extra.date||'')
+    .replace(/\{time\}/g,extra.time||'')
+    .replace(/\{location\}/g,extra.location||'')
+    .trim();
 }
 
 let _fuOutsideHandler=null;
@@ -1449,10 +1562,9 @@ window._waQuickOpen=async(pid,type)=>{
   const msg=resolveTemplate(tpl,p);
   const n=(p.phone||'').replace(/\D/g,'');
   window.open(`https://wa.me/65${n}?text=${encodeURIComponent(msg)}`,'_blank');
-  // Auto-update status
+  // Auto-update status (missed only — appt handled by _apptModal)
   const upd={lastCalledDate:today()};
   if(type==='missed'&&(!p.status||p.status==='New'))upd.status='Called';
-  if(type==='appt')upd.status='Meeting Set';
   await updateProspect(pid,upd,true);
   const row=document.querySelector(`tr[data-id="${pid}"]`);
   if(row&&upd.status){
@@ -1994,7 +2106,7 @@ function renderList(){
         <a class="wa-link" href="${waLink(p.phone)}" target="_blank" onclick="event.stopPropagation()" title="Open WhatsApp">${esc(p.phone||'—')}</a>
         ${p.phone?`<div class="wa-quick-btns">
           <span class="wa-quick missed" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','missed')" title="Send missed call message">📵 Missed</span>
-          <span class="wa-quick appt" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','appt')" title="Send appointment set message">📅 Appt</span>
+          <span class="wa-quick appt" onclick="event.stopPropagation();window._apptModal('${p.id}')" title="Set appointment">📅 Appt</span>
         </div>`:''}
       </td>
       <td style="color:var(--muted)">${calcAge(p.birthYear)}</td>

@@ -1367,7 +1367,9 @@ async function syncApptToGoogleCalendar(prospect,apptDate,apptTime,location){
     const token=await _getGTasksToken();
     const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
     const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
-    const batchTag=prospect.batch?` (${prospect.batch})`:'';
+    const batchObj=batches.find(b=>b.name===prospect.batch);
+    const isAXSBatch=batchObj?batchObj.type==='axs':(prospect.batch||'').toLowerCase().includes('axs');
+    const batchTag=prospect.batch?` (${isAXSBatch?'AXS':'Ekko'})`:'';
     const summary=`${fullName}${batchTag} - 1`;
     const [h,m]=apptTime.split(':').map(Number);
     const endMin=h*60+m+60;

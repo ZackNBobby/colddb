@@ -313,6 +313,13 @@
     .fu-date{font-size:11px;color:var(--dim);}
     .fu-today{color:var(--amber);font-weight:700;}
     .fu-overdue{color:var(--red);font-weight:700;}
+    .fu-cell{cursor:pointer;transition:background .15s;}
+    .fu-cell:hover{background:rgba(240,165,0,.05);}
+    .fu-cell:hover .fu-date:not(.fu-overdue):not(.fu-today){color:var(--gold)!important;}
+    #fuDatePicker{position:fixed;z-index:9999;background:rgba(6,13,24,.98);border:1px solid rgba(240,165,0,.25);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.7);min-width:210px;}
+    #fuDatePicker input[type=date]{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(51,65,85,.5);background:rgba(12,24,55,.9);color:#f1f5f9;font-size:13px;font-family:inherit;color-scheme:dark;}
+    #fuDatePicker input[type=date]:focus{outline:none;border-color:rgba(240,165,0,.5);}
+    #fuDatePicker .fu-picker-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;}
     .empty-state{padding:70px 20px;text-align:center;color:var(--dim);}
     .empty-icon{font-size:36px;margin-bottom:10px;opacity:.5;}
 
@@ -1335,6 +1342,62 @@ function resolveTemplate(tpl,p){
   return tpl.replace(/\{salutation\}/g,sal).replace(/\{name\}/g,name).trim();
 }
 
+let _fuOutsideHandler=null;
+window._quickFU=(pid,el)=>{
+  const existing=document.getElementById('fuDatePicker');if(existing)existing.remove();
+  if(_fuOutsideHandler)document.removeEventListener('click',_fuOutsideHandler);
+  const p=prospects.find(x=>x.id===pid);if(!p)return;
+  const rect=el.getBoundingClientRect();
+  const picker=document.createElement('div');
+  picker.id='fuDatePicker';
+  picker.style.top=(rect.bottom+6)+'px';
+  picker.style.left=Math.min(Math.max(8,rect.left),window.innerWidth-230)+'px';
+  picker.innerHTML=`
+    <div class="fu-picker-label">📅 Follow-up date</div>
+    <input type="date" id="fuDateInput" value="${p.followUpDate||''}" style="color-scheme:dark"/>
+    ${p.followUpDate?`<button class="btn btn-ghost" style="width:100%;margin-top:8px;padding:5px;font-size:11px" onclick="window._saveFU('${pid}','')">✕ Clear date</button>`:''}
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" style="flex:1;padding:6px" onclick="window._saveFU('${pid}',document.getElementById('fuDateInput').value)">Save & Sync</button>
+      <button class="btn btn-ghost" style="padding:6px 10px" onclick="document.getElementById('fuDatePicker').remove()">✕</button>
+    </div>`;
+  document.body.appendChild(picker);
+  document.getElementById('fuDateInput').focus();
+  _fuOutsideHandler=e=>{
+    if(!picker.contains(e.target)&&e.target!==el){
+      picker.remove();document.removeEventListener('click',_fuOutsideHandler);
+    }
+  };
+  setTimeout(()=>document.addEventListener('click',_fuOutsideHandler),0);
+};
+
+window._saveFU=async(pid,newDate)=>{
+  const picker=document.getElementById('fuDatePicker');
+  if(picker)picker.remove();
+  if(_fuOutsideHandler)document.removeEventListener('click',_fuOutsideHandler);
+  const p=prospects.find(x=>x.id===pid);if(!p)return;
+  if(newDate===(p.followUpDate||''))return;
+  let hist=[...(p.followUpHistory||[])];
+  const note=p.followUpDate?`Follow-up changed: ${p.followUpDate} → ${newDate||'cleared'}`:`Follow-up set to ${newDate}`;
+  hist.push({date:today(),note,type:'followup',updatedAt:new Date().toISOString()});
+  await updateProspect(pid,{followUpDate:newDate,followUpHistory:hist},true);
+  // Patch table cell in-place
+  const row=document.querySelector(`tr[data-id="${pid}"]`);
+  if(row){
+    const fuTd=row.querySelector('.fu-cell');
+    if(fuTd){
+      const p2=prospects.find(x=>x.id===pid);
+      const fuc=fuClass(newDate);
+      const needsFU=p2&&needsFollowUp(p2);
+      fuTd.innerHTML=newDate
+        ?(needsFU?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${newDate}</span></span>`:`<span class="fu-date ${fuc}">${newDate}</span>`)
+        :`<span class="fu-date">—</span>`;
+    }
+  }
+  if(selectedId===pid){const p2=prospects.find(x=>x.id===pid);if(p2)renderDetailContent(p2);}
+  if(newDate){const p2=prospects.find(x=>x.id===pid);syncFollowUpToGTasks(p2||{...p,followUpDate:newDate});}
+  else toast('Follow-up date cleared');
+};
+
 window._waQuickOpen=async(pid,type)=>{
   const p=prospects.find(x=>x.id===pid);
   if(!p||!p.phone){toast('No phone number for this lead');return;}
@@ -1904,7 +1967,7 @@ function renderList(){
         <span class="call-count" style="font-size:10px;color:var(--dim);margin-left:3px">${p.calledCount||0}x</span>
         <span class="last-called">${daysSince(p.lastCalledDate)}</span>
       </td>
-      <td>${followUpCell}</td>
+      <td class="fu-cell" onclick="event.stopPropagation();window._quickFU('${p.id}',this)">${followUpCell}</td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-blue" title="Called"><input type="checkbox" ${p.pickedUp?'checked':''} onchange="window._flag('${p.id}','pickedUp',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-teal" title="Contacted"><input type="checkbox" ${p.contacted?'checked':''} onchange="window._flag('${p.id}','contacted',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-purple" title="Meeting set"><input type="checkbox" ${p.meetingSet?'checked':''} onchange="window._flag('${p.id}','meetingSet',this.checked)"/><span class="tgl-box"></span></label></td>

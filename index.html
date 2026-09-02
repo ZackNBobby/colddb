@@ -1258,6 +1258,7 @@ function calcAge(by){return by?new Date().getFullYear()-by:'—';}
 function today(){return new Date().toISOString().slice(0,10);}
 function daysSince(d){if(!d)return 'Never';if(d===today())return 'Today';const n=Math.round((new Date(today())-new Date(d))/86400000);return n===1?'Yesterday':`${n}d ago`;}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
+function needsFollowUp(p){return p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';}
 
 // ── Google Tasks ──
 const GTASKS_CLIENT_ID='229769820838-g8efhhsetd1bfj7jk9mjlpjfhmq3bvf8.apps.googleusercontent.com';
@@ -1928,7 +1929,7 @@ function renderList(){
     tbody.innerHTML='';document.getElementById('emptyState').style.display='block';return;
   }
   document.getElementById('emptyState').style.display='none';
-  const needsFollowUp=p=>p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';
+  // needsFollowUp is defined at module level
   tbody.innerHTML=filtered.map((p,i)=>{
     const fuc=fuClass(p.followUpDate);
     const isCancelled=p.status==='Cancelled';

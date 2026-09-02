@@ -6,6 +6,7 @@
   <title>ColdDB — IAFA Prospects</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root{
       --bg:#010308;--bg2:rgba(6,13,24,.88);--bg3:rgba(10,20,36,.9);
@@ -49,16 +50,22 @@
     #app.visible{display:flex;}
 
     /* ── Topbar ── */
-    .topbar{background:rgba(4,9,18,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;gap:10px;flex-shrink:0;box-shadow:0 1px 0 rgba(240,165,0,.08);position:relative;}
+    .topbar{background:rgba(4,9,18,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 16px;height:54px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;flex-shrink:0;box-shadow:0 1px 0 rgba(240,165,0,.08);}
+    .topbar-left{display:flex;align-items:center;gap:10px;}
+    .topbar-right{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:nowrap;}
     .topbar-logo{font-size:17px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;cursor:pointer;}
-    .topbar-crumb{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:8px;position:absolute;left:50%;transform:translateX(-50%);pointer-events:none;}
-    .topbar-crumb>*{pointer-events:auto;}
+    .topbar-crumb{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:8px;justify-content:center;overflow:hidden;min-width:0;}
+    /* Batch progress bar */
+    .batch-progress-wrap{margin-top:10px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;display:flex;}
+    .batch-progress-seg{height:100%;transition:width .4s ease;}
+    /* Last called label */
+    .last-called{font-size:10px;color:var(--dim);margin-top:2px;display:block;}
     .topbar-crumb-batch{font-size:14px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
     .topbar-back{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--dim);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
     .topbar-back:hover{color:var(--text);border-color:var(--gold-border);}
     .topbar-sep{width:1px;height:18px;background:var(--border);margin:0 2px;}
-    .spacer{flex:1;}
     .btn{border:none;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;font-family:'Inter',sans-serif;}
+    @media(max-width:700px){.topbar{grid-template-columns:auto auto;height:auto;padding:8px 12px;flex-wrap:wrap;gap:6px;}.topbar-crumb{grid-column:1/-1;justify-content:flex-start;}.topbar-right{gap:4px;}.btn{padding:6px 10px;font-size:11px;}.user-email{display:none;}}
     .btn-primary{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#000;box-shadow:0 2px 12px rgba(240,165,0,.25);}
     .btn-primary:hover{box-shadow:0 4px 20px rgba(240,165,0,.4);transform:translateY(-1px);}
     .btn-secondary{background:rgba(14,24,40,.8);color:var(--text);border:1px solid var(--border);}
@@ -468,19 +475,23 @@
 
   <!-- Topbar -->
   <div class="topbar">
-    <div class="topbar-logo" onclick="window._goHome()">ColdDB</div>
-    <div class="nav-tabs" id="navTabs">
-      <button class="nav-tab active" id="navDash" onclick="window._goHome()">Dashboard</button>
-      <button class="nav-tab" id="navSales" onclick="window._goSales()">💰 Sales</button>
+    <div class="topbar-left">
+      <div class="topbar-logo" onclick="window._goHome()">ColdDB</div>
+      <div class="nav-tabs" id="navTabs">
+        <button class="nav-tab active" id="navDash" onclick="window._goHome()">Dashboard</button>
+        <button class="nav-tab" id="navSales" onclick="window._goSales()">💰 Sales</button>
+      </div>
     </div>
     <div class="topbar-crumb" id="topbarCrumb"></div>
-    <div class="spacer"></div>
-    <button class="btn btn-secondary" id="btnImport" style="display:none">↑ Import CSV</button>
-    <button class="btn btn-primary" id="btnAdd">+ Add Prospect</button>
-    <button class="btn btn-primary" id="btnAddClosing" style="display:none" onclick="window._addClosingModal()">+ Log Closing</button>
-    <button class="btn btn-ghost" id="btnTemplates" title="Edit WhatsApp message templates">💬 Templates</button>
-    <span class="user-email" id="userEmail"></span>
-    <button class="btn btn-ghost" id="btnSignOut">Sign out</button>
+    <div class="topbar-right">
+      <button class="btn btn-secondary" id="btnImport" style="display:none">↑ Import</button>
+      <button class="btn btn-ghost" id="btnExport" style="display:none" title="Export current view as CSV">↓ Export</button>
+      <button class="btn btn-primary" id="btnAdd">+ Add</button>
+      <button class="btn btn-primary" id="btnAddClosing" style="display:none" onclick="window._addClosingModal()">+ Log Sale</button>
+      <button class="btn btn-ghost" id="btnTemplates" title="Edit WhatsApp message templates">💬</button>
+      <span class="user-email" id="userEmail"></span>
+      <button class="btn btn-ghost" id="btnSignOut">Sign out</button>
+    </div>
   </div>
 
   <!-- DASHBOARD VIEW -->
@@ -648,6 +659,20 @@ onAuthStateChanged(auth,user=>{
 document.getElementById('btnGoogleLogin').addEventListener('click',()=>signInWithPopup(auth,new GoogleAuthProvider()));
 document.getElementById('btnSignOut').addEventListener('click',()=>signOut(auth));
 document.getElementById('btnTemplates').addEventListener('click',()=>window._templatesModal());
+document.getElementById('btnExport').addEventListener('click',()=>window._exportCSV());
+
+window._exportCSV=()=>{
+  const rows=activeBatch?prospects.filter(p=>p.batch===activeBatch):prospects;
+  if(!rows.length){toast('No prospects to export');return;}
+  const esc2=v=>`"${(v==null?'':String(v)).replace(/"/g,'""')}"`;
+  const headers=['Name','Preferred Name','Gender','Birth Year','Phone','NRIC','Batch','Status','Called Count','Last Called','Follow-up Date','Appointment Date','Picked Up','Contacted','Meeting Set','Met','Purchased','Referral','Notes'];
+  const csv=[headers.join(','),...rows.map(p=>[p.name,p.preferredName,p.gender,p.birthYear,p.phone,p.nric,p.batch,p.status,p.calledCount||0,p.lastCalledDate||'',p.followUpDate||'',p.appointmentDate||'',p.pickedUp?1:0,p.contacted?1:0,p.meetingSet?1:0,p.met?1:0,p.purchased?1:0,p.referral?1:0,(p.extraNotes||'').replace(/\n/g,' ')].map(esc2).join(','))].join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`colddb_${(activeBatch||'all').replace(/\s/g,'_')}_${today()}.csv`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  toast(`Exported ${rows.length} prospects ✓`);
+};
 
 // ── Load all data ──
 async function loadAll(){
@@ -774,6 +799,7 @@ function showSales(){
   document.getElementById('prospectView').style.display='none';
   document.getElementById('salesView').style.display='block';
   document.getElementById('btnImport').style.display='none';
+  document.getElementById('btnExport').style.display='none';
   document.getElementById('btnAdd').style.display='none';
   document.getElementById('btnAddClosing').style.display='';
   document.getElementById('navTabs').style.display='flex';
@@ -1223,7 +1249,77 @@ let toastTimer=null;
 function toast(msg,dur=3500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),dur);}
 function calcAge(by){return by?new Date().getFullYear()-by:'—';}
 function today(){return new Date().toISOString().slice(0,10);}
+function daysSince(d){if(!d)return 'Never';if(d===today())return 'Today';const n=Math.round((new Date(today())-new Date(d))/86400000);return n===1?'Yesterday':`${n}d ago`;}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
+
+// ── Google Tasks ──
+const GTASKS_CLIENT_ID='229769820838-g8efhhsetd1bfj7jk9mjlpjfhmq3bvf8.apps.googleusercontent.com';
+let _gTasksTokenClient=null;
+let _gTasksToken=null;
+let _gTasksListId=null;
+
+function initGoogleTasks(){
+  if(!window.google?.accounts?.oauth2)return;
+  if(_gTasksTokenClient)return;
+  _gTasksTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GTASKS_CLIENT_ID,
+    scope:'https://www.googleapis.com/auth/tasks',
+    callback:()=>{}
+  });
+  try{const s=JSON.parse(localStorage.getItem('gtasks_tok')||'null');if(s&&s.exp>Date.now()+60000)_gTasksToken=s.t;}catch(e){}
+}
+
+function _tryInitGTasks(){if(window.google?.accounts?.oauth2)initGoogleTasks();else setTimeout(_tryInitGTasks,300);}
+_tryInitGTasks();
+
+async function _getGTasksToken(){
+  try{const s=JSON.parse(localStorage.getItem('gtasks_tok')||'null');if(s&&s.exp>Date.now()+60000){_gTasksToken=s.t;return s.t;}}catch(e){}
+  if(!_gTasksTokenClient){_tryInitGTasks();await new Promise(r=>setTimeout(r,600));}
+  if(!_gTasksTokenClient)throw new Error('Google Tasks not ready');
+  return new Promise((resolve,reject)=>{
+    _gTasksTokenClient.callback=resp=>{
+      if(resp.error){reject(new Error(resp.error));return;}
+      _gTasksToken=resp.access_token;
+      localStorage.setItem('gtasks_tok',JSON.stringify({t:resp.access_token,exp:Date.now()+resp.expires_in*1000}));
+      resolve(resp.access_token);
+    };
+    _gTasksTokenClient.requestAccessToken({prompt:_gTasksToken?'':'consent'});
+  });
+}
+
+async function _getOrCreateTaskList(token){
+  if(_gTasksListId)return _gTasksListId;
+  const r=await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists',{headers:{Authorization:`Bearer ${token}`}});
+  const d=await r.json();
+  const existing=(d.items||[]).find(l=>l.title==='ColdDB Follow-ups');
+  if(existing){_gTasksListId=existing.id;return existing.id;}
+  const cr=await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({title:'ColdDB Follow-ups'})});
+  const nl=await cr.json();
+  _gTasksListId=nl.id;
+  return nl.id;
+}
+
+async function syncFollowUpToGTasks(prospect){
+  if(!prospect.followUpDate)return;
+  try{
+    const token=await _getGTasksToken();
+    const listId=await _getOrCreateTaskList(token);
+    const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
+    const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
+    const title=`Call ${fullName} — ${prospect.batch||''}`.trim();
+    const due=prospect.followUpDate+'T00:00:00.000Z';
+    const notes=`Phone: ${prospect.phone||'—'} | Status: ${prospect.status||'New'} | Batch: ${prospect.batch||''}`;
+    const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+    if(prospect.googleTaskId){
+      await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${prospect.googleTaskId}`,{method:'PATCH',headers,body:JSON.stringify({title,due,notes,status:'needsAction'})});
+    }else{
+      const res=await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks`,{method:'POST',headers,body:JSON.stringify({title,due,notes})});
+      const task=await res.json();
+      if(task.id)await updateProspect(prospect.id,{googleTaskId:task.id},true);
+    }
+    toast('📋 Synced to Google Tasks ✓');
+  }catch(e){console.warn('GTasks sync:',e);toast('⚠️ Google Tasks: '+(e.message||e));}
+}
 
 const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];
 const PIPELINE=['pickedUp','contacted','meetingSet','met','purchased']; // ordered earliest→latest
@@ -1239,16 +1335,27 @@ function resolveTemplate(tpl,p){
   return tpl.replace(/\{salutation\}/g,sal).replace(/\{name\}/g,name).trim();
 }
 
-window._waQuickOpen=(pid,type)=>{
+window._waQuickOpen=async(pid,type)=>{
   const p=prospects.find(x=>x.id===pid);
   if(!p||!p.phone){toast('No phone number for this lead');return;}
   const isAXS=(p.batch||'').toLowerCase().includes('axs');
   const key=(isAXS?'axs':'ekko')+'_'+type;
   const tpl=msgTemplates[key]||'';
-  if(!tpl){toast('No template set — click 💬 Templates to add one.');return;}
+  if(!tpl){toast('No template set — click 💬 to add one.');return;}
   const msg=resolveTemplate(tpl,p);
   const n=(p.phone||'').replace(/\D/g,'');
   window.open(`https://wa.me/65${n}?text=${encodeURIComponent(msg)}`,'_blank');
+  // Auto-update status
+  const upd={lastCalledDate:today()};
+  if(type==='missed'&&(!p.status||p.status==='New'))upd.status='Called';
+  if(type==='appt')upd.status='Meeting Set';
+  await updateProspect(pid,upd,true);
+  const row=document.querySelector(`tr[data-id="${pid}"]`);
+  if(row&&upd.status){
+    const badge=row.querySelector('.status-badge');
+    if(badge){badge.textContent=upd.status;badge.className=`status-badge ${statusCls(upd.status)}`;}
+  }
+  if(row){const lc=row.querySelector('.last-called');if(lc)lc.textContent='Today';}
 };
 
 window._templatesModal=()=>{
@@ -1344,6 +1451,7 @@ function showDashboard(){
   document.getElementById('prospectView').style.display='none';
   document.getElementById('salesView').style.display='none';
   document.getElementById('btnImport').style.display='none';
+  document.getElementById('btnExport').style.display='none';
   document.getElementById('btnAdd').style.display='';
   document.getElementById('btnAddClosing').style.display='none';
   document.getElementById('navTabs').style.display='flex';
@@ -1361,6 +1469,7 @@ function showProspects(batchName=''){
   document.getElementById('salesView').style.display='none';
   document.getElementById('prospectView').style.display='flex';
   document.getElementById('btnImport').style.display='';
+  document.getElementById('btnExport').style.display='';
   document.getElementById('btnAdd').style.display='';
   document.getElementById('btnAddClosing').style.display='none';
   document.getElementById('navTabs').style.display='none';
@@ -1489,7 +1598,7 @@ function renderBatchGrid(){
       </div>
       <div class="batch-card-count">${total}</div>
       <div class="batch-card-sub">${total===1?'prospect':'prospects'}</div>
-      ${total?`<div class="batch-funnel">${funnelRows}</div>${coldLine}`:'<div style="color:var(--dim);font-size:11px;padding:8px 0">No data yet — import a CSV to get started.</div>'}
+      ${total?`<div class="batch-progress-wrap" title="Called: ${fc.called} | Contacted: ${fc.contacted} | Appt: ${fc.apptSet} | Met: ${fc.met} | Converted: ${fc.converted}">${[{n:fc.called,c:'#60a5fa'},{n:fc.contacted,c:'#2dd4bf'},{n:fc.apptSet,c:'#c084fc'},{n:fc.met,c:'#fbbf24'},{n:fc.converted,c:'#4ade80'}].map(s=>`<div class="batch-progress-seg" style="width:${(s.n/total*100).toFixed(1)}%;background:${s.c}"></div>`).join('')}</div><div class="batch-funnel">${funnelRows}</div>${coldLine}`:'<div style="color:var(--dim);font-size:11px;padding:8px 0">No data yet — import a CSV to get started.</div>'}
       <div class="batch-drag-handle" title="Drag to reorder">⠿</div>
     </div>`;
   });
@@ -1793,6 +1902,7 @@ function renderList(){
       <td>
         <span class="call-btn" onclick="event.stopPropagation();window._addCall('${p.id}')">📞 +1</span>
         <span class="call-count" style="font-size:10px;color:var(--dim);margin-left:3px">${p.calledCount||0}x</span>
+        <span class="last-called">${daysSince(p.lastCalledDate)}</span>
       </td>
       <td>${followUpCell}</td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-blue" title="Called"><input type="checkbox" ${p.pickedUp?'checked':''} onchange="window._flag('${p.id}','pickedUp',this.checked)"/><span class="tgl-box"></span></label></td>
@@ -1870,10 +1980,13 @@ window._flag=async(id,field,val)=>{
 window._addCall=async id=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const c=(p.calledCount||0)+1;
-  await updateProspect(id,{calledCount:c,status:p.status==='New'?'Called':p.status},true);
-  // Patch just the count cell — no full re-render
+  const td=today();
+  await updateProspect(id,{calledCount:c,lastCalledDate:td,status:p.status==='New'?'Called':p.status},true);
   const row=document.querySelector(`tr[data-id="${id}"]`);
-  if(row)row.querySelector('.call-count').textContent=`${c}x`;
+  if(row){
+    row.querySelector('.call-count').textContent=`${c}x`;
+    const lc=row.querySelector('.last-called');if(lc)lc.textContent='Today';
+  }
   if(selectedId===id){const upd=prospects.find(x=>x.id===id);if(upd)renderDetailContent(upd);}
   renderStats();
 };
@@ -2025,9 +2138,11 @@ window._saveDetail=async(id,type)=>{
   const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,referredBy:document.getElementById('d_referredby')?.value.trim()||'',followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
   if(type==='axs'){upd.savings=document.getElementById('d_savings').value;upd.priorities=document.getElementById('d_priorities').value.trim();}
   else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
+  const fuChanged=newFU&&newFU!==(p.followUpDate||'');
   await updateProspect(id,upd);
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
   toast('Saved ✓');
+  if(fuChanged){const p3=prospects.find(x=>x.id===id);syncFollowUpToGTasks(p3||{...p,...upd});}
 };
 
 window._addNote=async(id)=>{

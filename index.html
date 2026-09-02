@@ -1267,29 +1267,30 @@ let _gTasksTokenClient=null;
 let _gTasksToken=null;
 let _gTasksListId=null;
 
+const GTOK_KEY='gtasks_tok_v2'; // v2 = Tasks + Calendar scopes
 function initGoogleTasks(){
   if(!window.google?.accounts?.oauth2)return;
   if(_gTasksTokenClient)return;
   _gTasksTokenClient=google.accounts.oauth2.initTokenClient({
     client_id:GTASKS_CLIENT_ID,
-    scope:'https://www.googleapis.com/auth/tasks',
+    scope:'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.events',
     callback:()=>{}
   });
-  try{const s=JSON.parse(localStorage.getItem('gtasks_tok')||'null');if(s&&s.exp>Date.now()+60000)_gTasksToken=s.t;}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(GTOK_KEY)||'null');if(s&&s.exp>Date.now()+60000)_gTasksToken=s.t;}catch(e){}
 }
 
 function _tryInitGTasks(){if(window.google?.accounts?.oauth2)initGoogleTasks();else setTimeout(_tryInitGTasks,300);}
 _tryInitGTasks();
 
 async function _getGTasksToken(){
-  try{const s=JSON.parse(localStorage.getItem('gtasks_tok')||'null');if(s&&s.exp>Date.now()+60000){_gTasksToken=s.t;return s.t;}}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(GTOK_KEY)||'null');if(s&&s.exp>Date.now()+60000){_gTasksToken=s.t;return s.t;}}catch(e){}
   if(!_gTasksTokenClient){_tryInitGTasks();await new Promise(r=>setTimeout(r,600));}
-  if(!_gTasksTokenClient)throw new Error('Google Tasks not ready');
+  if(!_gTasksTokenClient)throw new Error('Google not ready');
   return new Promise((resolve,reject)=>{
     _gTasksTokenClient.callback=resp=>{
       if(resp.error){reject(new Error(resp.error));return;}
       _gTasksToken=resp.access_token;
-      localStorage.setItem('gtasks_tok',JSON.stringify({t:resp.access_token,exp:Date.now()+resp.expires_in*1000}));
+      localStorage.setItem(GTOK_KEY,JSON.stringify({t:resp.access_token,exp:Date.now()+resp.expires_in*1000}));
       resolve(resp.access_token);
     };
     _gTasksTokenClient.requestAccessToken({prompt:_gTasksToken?'':'consent'});
@@ -1329,6 +1330,36 @@ async function syncFollowUpToGTasks(prospect){
     }
     toast('📋 Synced to Google Tasks ✓');
   }catch(e){console.warn('GTasks sync:',e);toast('⚠️ Google Tasks: '+(e.message||e));}
+}
+
+async function syncToGoogleCalendar(prospect){
+  if(!prospect.followUpDate||!prospect.followUpTime)return;
+  try{
+    const token=await _getGTasksToken();
+    const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
+    const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
+    const [h,m]=prospect.followUpTime.split(':').map(Number);
+    const endMin=h*60+m+30;
+    const endH=String(Math.floor(endMin/60)%24).padStart(2,'0');
+    const endM=String(endMin%60).padStart(2,'0');
+    const endDate=endMin>=1440?new Date(new Date(prospect.followUpDate).getTime()+86400000).toISOString().slice(0,10):prospect.followUpDate;
+    const event={
+      summary:`Call ${fullName}`,
+      description:prospect.phone||'',
+      start:{dateTime:`${prospect.followUpDate}T${prospect.followUpTime}:00`,timeZone:'Asia/Singapore'},
+      end:{dateTime:`${endDate}T${endH}:${endM}:00`,timeZone:'Asia/Singapore'},
+      reminders:{useDefault:false,overrides:[{method:'popup',minutes:0}]}
+    };
+    const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+    if(prospect.googleCalEventId){
+      await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${prospect.googleCalEventId}`,{method:'PUT',headers,body:JSON.stringify(event)});
+    }else{
+      const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{method:'POST',headers,body:JSON.stringify(event)});
+      const ev=await res.json();
+      if(ev.id)await updateProspect(prospect.id,{googleCalEventId:ev.id},true);
+    }
+    toast('📅 Calendar reminder set ✓');
+  }catch(e){console.warn('Calendar sync:',e);toast('⚠️ Calendar: '+(e.message||e));}
 }
 
 const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];
@@ -1401,8 +1432,11 @@ window._saveFU=async(pid,newDate,newTime='')=>{
     }
   }
   if(selectedId===pid){const p2=prospects.find(x=>x.id===pid);if(p2)renderDetailContent(p2);}
-  if(newDate){const p2=prospects.find(x=>x.id===pid);syncFollowUpToGTasks(p2||{...p,followUpDate:newDate,followUpTime:newTime});}
-  else toast('Follow-up cleared');
+  if(newDate){
+    const p2=prospects.find(x=>x.id===pid)||{...p,followUpDate:newDate,followUpTime:newTime};
+    syncFollowUpToGTasks(p2);
+    if(newTime)syncToGoogleCalendar(p2);
+  }else toast('Follow-up cleared');
 };
 
 window._waQuickOpen=async(pid,type)=>{
@@ -2213,7 +2247,7 @@ window._saveDetail=async(id,type)=>{
   await updateProspect(id,upd);
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
   toast('Saved ✓');
-  if(fuChanged){const p3=prospects.find(x=>x.id===id);syncFollowUpToGTasks(p3||{...p,...upd});}
+  if(fuChanged){const p3=prospects.find(x=>x.id===id)||{...p,...upd};syncFollowUpToGTasks(p3);if(p3.followUpTime)syncToGoogleCalendar(p3);}
 };
 
 window._addNote=async(id)=>{

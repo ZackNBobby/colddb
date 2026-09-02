@@ -1435,15 +1435,18 @@ window._confirmAppt=async(pid,type)=>{
   const location=document.getElementById('appt_loc').value.trim()||'Our Office';
   if(!apptDate){toast('Please pick a date');return;}
   if(!apptTime){toast('Please pick a time');return;}
+  // Pre-fetch Google token NOW while still in user-gesture context (before window.open blocks it)
+  let _calToken=null;
+  try{_calToken=await _getGTasksToken();}catch(e){console.warn('Google auth:',e);}
   document.getElementById('apptModal').remove();
   const p=prospects.find(x=>x.id===pid);if(!p)return;
-  // Format date nicely for WhatsApp message
+  // Format date/time for WhatsApp message
   const dateFmt=new Date(apptDate+'T12:00:00').toLocaleDateString('en-SG',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const [hh,mm]=apptTime.split(':');
   const h12=((parseInt(hh)%12)||12);
   const ampm=parseInt(hh)<12?'AM':'PM';
   const timeFmt=`${h12}:${mm} ${ampm}`;
-  // Save appointment to Firestore + update status
+  // Save to Firestore + update status
   await updateProspect(pid,{
     appointmentDate:apptDate,appointmentTime:apptTime,appointmentLocation:location,
     status:'Meeting Set',meetingSet:true,lastCalledDate:today()
@@ -1456,7 +1459,7 @@ window._confirmAppt=async(pid,type)=>{
     const lc=row.querySelector('.last-called');if(lc)lc.textContent='Today';
   }
   if(selectedId===pid){const p2=prospects.find(x=>x.id===pid);if(p2)renderDetailContent(p2);}
-  // Send WhatsApp with filled template
+  // Send WhatsApp
   const tplKey=(type==='axs'?'axs':'ekko')+'_appt';
   const tpl=msgTemplates[tplKey]||'';
   if(tpl){
@@ -1464,9 +1467,9 @@ window._confirmAppt=async(pid,type)=>{
     const n=(p.phone||'').replace(/\D/g,'');
     if(n)window.open(`https://wa.me/65${n}?text=${encodeURIComponent(msg)}`,'_blank');
   }else{toast('No appt template set — click 💬 to add one.');}
-  // Sync to Google Calendar
+  // Sync to Google Calendar (token already fetched above)
   const p2=prospects.find(x=>x.id===pid)||{...p,appointmentDate:apptDate};
-  syncApptToGoogleCalendar(p2,apptDate,apptTime,location);
+  await syncApptToGoogleCalendar(p2,apptDate,apptTime,location);
 };
 
 const STATUSES=['New','Called','Contacted','Meeting Set','Met','Converted','Cold','Cancelled'];

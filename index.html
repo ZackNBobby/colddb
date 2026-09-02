@@ -1517,6 +1517,13 @@ window._quickFU=(pid,el)=>{
     </div>`;
   document.body.appendChild(picker);
   document.getElementById('fuDateInput').focus();
+  // Auto-save when time is selected and date is already filled
+  let _fuAutoSaveTimer=null;
+  document.getElementById('fuTimeInput').addEventListener('change',()=>{
+    const d=document.getElementById('fuDateInput').value;
+    const t=document.getElementById('fuTimeInput').value;
+    if(d&&t){clearTimeout(_fuAutoSaveTimer);_fuAutoSaveTimer=setTimeout(()=>window._saveFU(pid,d,t),400);}
+  });
   _fuOutsideHandler=e=>{
     if(!picker.contains(e.target)&&e.target!==el){
       picker.remove();document.removeEventListener('click',_fuOutsideHandler);
@@ -1535,7 +1542,9 @@ window._saveFU=async(pid,newDate,newTime='')=>{
   const timeStr=newTime?` at ${newTime}`:'';
   const note=p.followUpDate?`Follow-up changed: ${p.followUpDate}${p.followUpTime?' '+p.followUpTime:''} → ${newDate?newDate+timeStr:'cleared'}`:`Follow-up set to ${newDate}${timeStr}`;
   hist.push({date:today(),note,type:'followup',updatedAt:new Date().toISOString()});
-  await updateProspect(pid,{followUpDate:newDate,followUpTime:newTime,followUpHistory:hist},true);
+  const fuUpd={followUpDate:newDate,followUpTime:newTime,followUpHistory:hist};
+  if(!newDate){fuUpd.googleTaskId=null;fuUpd.googleCalEventId=null;} // reset so next sync creates fresh
+  await updateProspect(pid,fuUpd,true);
   // Patch table cell in-place
   const row=document.querySelector(`tr[data-id="${pid}"]`);
   if(row){

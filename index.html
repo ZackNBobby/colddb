@@ -1260,6 +1260,7 @@ function today(){return new Date().toISOString().slice(0,10);}
 function daysSince(d){if(!d)return 'Never';if(d===today())return 'Today';const n=Math.round((new Date(today())-new Date(d))/86400000);return n===1?'Yesterday':`${n}d ago`;}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
 function needsFollowUp(p){return p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';}
+function getSal(gender){const v=(gender||'').trim().toUpperCase().charAt(0);return v==='M'?'Mr':v==='F'?'Ms':'';}
 
 // ── Google Tasks ──
 const GTASKS_CLIENT_ID='229769820838-g8efhhsetd1bfj7jk9mjlpjfhmq3bvf8.apps.googleusercontent.com';
@@ -1314,7 +1315,7 @@ async function syncFollowUpToGTasks(prospect){
   try{
     const token=await _getGTasksToken();
     const listId=await _getOrCreateTaskList(token);
-    const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
+    const sal=getSal(prospect.gender);
     const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
     const timeStr=prospect.followUpTime?` at ${prospect.followUpTime}`:'';
     const title=`Call ${fullName}${timeStr}`.trim();
@@ -1336,7 +1337,7 @@ async function syncToGoogleCalendar(prospect){
   if(!prospect.followUpDate||!prospect.followUpTime)return;
   try{
     const token=await _getGTasksToken();
-    const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
+    const sal=getSal(prospect.gender);
     const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
     const [h,m]=prospect.followUpTime.split(':').map(Number);
     const endMin=h*60+m+30;
@@ -1365,7 +1366,7 @@ async function syncToGoogleCalendar(prospect){
 async function syncApptToGoogleCalendar(prospect,apptDate,apptTime,location){
   try{
     const token=await _getGTasksToken();
-    const sal=prospect.gender==='M'?'Mr':prospect.gender==='F'?'Ms':'';
+    const sal=getSal(prospect.gender);
     const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
     const batchObj=batches.find(b=>b.name===prospect.batch);
     const isAXSBatch=batchObj?batchObj.type==='axs':(prospect.batch||'').toLowerCase().includes('axs');
@@ -1401,7 +1402,7 @@ window._apptModal=(pid)=>{
   const p=prospects.find(x=>x.id===pid);if(!p)return;
   const existing=document.getElementById('apptModal');if(existing)existing.remove();
   const isAXS=(p.batch||'').toLowerCase().includes('axs');
-  const sal=p.gender==='M'?'Mr':p.gender==='F'?'Ms':'';
+  const sal=getSal(p.gender);
   const displayName=`${sal} ${p.preferredName||p.name}`.trim();
   const ov=document.createElement('div');
   ov.className='modal-bg';ov.id='apptModal';
@@ -1483,7 +1484,7 @@ function statusCls(s){return 's-'+(s||'New').replace(/\s/g,'');}
 function waLink(phone){const n=(phone||'').replace(/\D/g,'');return n?`https://wa.me/65${n}`:'#';}
 
 function resolveTemplate(tpl,p,extra={}){
-  const sal=p.gender==='M'?'Mr':p.gender==='F'?'Ms':'';
+  const sal=getSal(p.gender);
   const name=p.preferredName||p.name||'';
   return tpl
     .replace(/\{salutation\}/g,sal)

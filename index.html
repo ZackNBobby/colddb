@@ -1563,7 +1563,6 @@ window._saveFU=async(pid,newDate,newTime='')=>{
   if(newDate){
     const p2=prospects.find(x=>x.id===pid)||{...p,followUpDate:newDate,followUpTime:newTime};
     syncFollowUpToGTasks(p2);
-    if(newTime)syncToGoogleCalendar(p2);
   }else toast('Follow-up cleared');
 };
 
@@ -2374,7 +2373,7 @@ window._saveDetail=async(id,type)=>{
   await updateProspect(id,upd);
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
   toast('Saved ✓');
-  if(fuChanged){const p3=prospects.find(x=>x.id===id)||{...p,...upd};syncFollowUpToGTasks(p3);if(p3.followUpTime)syncToGoogleCalendar(p3);}
+  if(fuChanged){const p3=prospects.find(x=>x.id===id)||{...p,...upd};syncFollowUpToGTasks(p3);}
 };
 
 window._addNote=async(id)=>{

@@ -217,18 +217,19 @@
     .prospect-table th:nth-child(7){width:88px;}
     .prospect-table th:nth-child(8){width:66px;}
     .prospect-table th:nth-child(9){width:74px;}
-    .prospect-table th:nth-child(10){width:28px;text-align:center;}
+    .prospect-table th:nth-child(10){width:56px;}
     .prospect-table th:nth-child(11){width:28px;text-align:center;}
     .prospect-table th:nth-child(12){width:28px;text-align:center;}
     .prospect-table th:nth-child(13){width:28px;text-align:center;}
     .prospect-table th:nth-child(14){width:28px;text-align:center;}
     .prospect-table th:nth-child(15){width:28px;text-align:center;}
-    .prospect-table td:nth-child(10){text-align:center;}
+    .prospect-table th:nth-child(16){width:28px;text-align:center;}
     .prospect-table td:nth-child(11){text-align:center;}
     .prospect-table td:nth-child(12){text-align:center;}
     .prospect-table td:nth-child(13){text-align:center;}
     .prospect-table td:nth-child(14){text-align:center;}
     .prospect-table td:nth-child(15){text-align:center;}
+    .prospect-table td:nth-child(16){text-align:center;}
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .25s ease both;position:relative;}
     .prospect-table tbody tr:hover td{background:rgba(240,165,0,.04);}
     .prospect-table tbody tr:hover td:first-child{border-left:2px solid rgba(240,165,0,.3);}
@@ -2107,7 +2108,8 @@ function renderList(){
     const isCancelled=p.status==='Cancelled';
     const cls=[p.id===selectedId?'selected':'',isCancelled?'cancelled':''].filter(Boolean).join(' ');
     const isAXS=p.leadType==='axs';
-    const gColor=p.gender==='M'?'#60a5fa':p.gender==='F'?'#f472b6':'var(--dim)';
+    const gNorm=(p.gender||'').trim().toUpperCase().charAt(0);
+    const gColor=gNorm==='M'?'#60a5fa':gNorm==='F'?'#f472b6':'var(--dim)';
     const policyText=isAXS?(p.savings||'—'):(p.policies||'—');
     const hasNotes=p.extraNotes&&p.extraNotes.trim().length>0;
     const fuTime=p.followUpTime?`<span style="font-size:10px;color:var(--dim);display:block">${p.followUpTime}</span>`:'';
@@ -2135,7 +2137,7 @@ function renderList(){
       </td>
       <td style="color:var(--muted)">${calcAge(p.birthYear)}</td>
       <td><span class="batch-tag ${isAXS?'axs-tag':''}">${esc(p.batch||'—')}</span></td>
-      <td style="color:${gColor};font-weight:700;font-size:11px">${p.gender||'—'}</td>
+      <td style="color:${gColor};font-weight:700;font-size:11px">${gNorm||'—'}</td>
       <td style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(policyText)}">${esc(policyText)}</td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
         <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>

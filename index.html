@@ -1411,10 +1411,12 @@ window._apptModal=(pid)=>{
   const isAXS=(p.batch||'').toLowerCase().includes('axs');
   const sal=getSal(p.gender);
   const displayName=`${sal} ${p.preferredName||p.name}`.trim();
+  const hasAppt=!!p.appointmentDate;
   const ov=document.createElement('div');
   ov.className='modal-bg';ov.id='apptModal';
   ov.innerHTML=`<div class="modal" style="max-width:440px" onclick="event.stopPropagation()">
-    <h2>📅 Set Appointment — ${esc(displayName)}</h2>
+    <h2>📅 ${hasAppt?'Edit':'Set'} Appointment — ${esc(displayName)}</h2>
+    ${hasAppt?`<div style="margin-bottom:12px;padding:8px 12px;background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.2);border-radius:8px;font-size:12px;color:#c084fc">Current: ${fmtShortDate(p.appointmentDate)}${p.appointmentTime?' at '+p.appointmentTime:''}</div>`:''}
     <div style="display:grid;gap:14px">
       <div>
         <label class="field-label">Date</label>
@@ -1422,14 +1424,15 @@ window._apptModal=(pid)=>{
       </div>
       <div>
         <label class="field-label">Time</label>
-        <input class="field-input" id="appt_time" type="time" value="${p.appointmentDate?'':''}" style="color-scheme:dark"/>
+        <input class="field-input" id="appt_time" type="time" value="${p.appointmentTime||''}" style="color-scheme:dark"/>
       </div>
       <div>
         <label class="field-label">Location</label>
-        <input class="field-input" id="appt_loc" type="text" value="Our Office" placeholder="e.g. Our Office, Starbucks..."/>
+        <input class="field-input" id="appt_loc" type="text" value="${p.appointmentLocation||'Our Office'}" placeholder="e.g. Our Office, Starbucks..."/>
       </div>
     </div>
     <div class="modal-footer">
+      ${hasAppt?`<button class="btn btn-ghost" style="color:#f87171;border-color:rgba(248,113,113,.3)" onclick="window._clearAppt('${pid}')">✕ Delete Appt</button>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('apptModal').remove()">Cancel</button>
       <button class="btn btn-primary" onclick="window._confirmAppt('${pid}','${isAXS?'axs':'ekko'}')">Confirm & Send WhatsApp</button>
     </div>
@@ -1437,6 +1440,22 @@ window._apptModal=(pid)=>{
   document.body.appendChild(ov);
   ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
   document.getElementById('appt_date').focus();
+};
+
+window._clearAppt=async(pid)=>{
+  document.getElementById('apptModal')?.remove();
+  const p=prospects.find(x=>x.id===pid);if(!p)return;
+  if(p.googleApptEventId){
+    try{
+      const token=await _getGTasksToken();
+      await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${p.googleApptEventId}`,{
+        method:'DELETE',headers:{Authorization:`Bearer ${token}`}
+      });
+    }catch(e){console.warn('Cal delete failed',e);}
+  }
+  await updateProspect(pid,{appointmentDate:null,appointmentTime:null,appointmentLocation:null,googleApptEventId:null},true);
+  toast('Appointment deleted');
+  renderList();
 };
 
 window._confirmAppt=async(pid,type)=>{

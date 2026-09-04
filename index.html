@@ -316,6 +316,10 @@
     .fu-cell{cursor:pointer;transition:background .15s;}
     .fu-cell:hover{background:rgba(240,165,0,.05);}
     .fu-cell:hover .fu-date:not(.fu-overdue):not(.fu-today){color:var(--gold)!important;}
+    .appt-cell{cursor:pointer;transition:background .15s;}
+    .appt-cell:hover{background:rgba(192,132,252,.07);}
+    .appt-cell:hover .appt-date{color:#c084fc!important;}
+    .appt-date{font-size:11px;}
     #fuDatePicker{position:fixed;z-index:9999;background:rgba(6,13,24,.98);border:1px solid rgba(240,165,0,.25);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.7);min-width:220px;}
     #fuDatePicker input[type=date],#fuDatePicker input[type=time]{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(51,65,85,.5);background:rgba(12,24,55,.9);color:#f1f5f9;font-size:13px;font-family:inherit;color-scheme:dark;box-sizing:border-box;}
     #fuDatePicker input[type=date]:focus,#fuDatePicker input[type=time]:focus{outline:none;border-color:rgba(240,165,0,.5);}
@@ -573,6 +577,7 @@
                 <th onclick="window._sort('status')">Status</th>
                 <th onclick="window._sort('calledCount')">Called</th>
                 <th onclick="window._sort('followUpDate')">Follow-up</th>
+                <th onclick="window._sort('appointmentDate')">Appt</th>
                 <th title="Called / picked up">📞</th>
                 <th title="Contacted (had a conversation)">💬</th>
                 <th title="Meeting set">📅</th>
@@ -1741,7 +1746,7 @@ function getFunnelCounts(arr){
   const total=arr.length;
   const called=arr.filter(p=>p.pickedUp||(p.calledCount||0)>0||['Called','Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
   const contacted=arr.filter(p=>p.contacted||['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
-  const apptSet=arr.filter(p=>p.meetingSet||p.appointmentDate||['Meeting Set','Met','Converted'].includes(p.status)).length;
+  const apptSet=arr.filter(p=>p.appointmentDate||['Met','Converted'].includes(p.status)).length;
   const met=arr.filter(p=>p.met||['Met','Converted'].includes(p.status)).length;
   const converted=arr.filter(p=>p.purchased||p.status==='Converted').length;
   const cold=arr.filter(p=>p.status==='Cold').length;
@@ -2012,7 +2017,7 @@ window._sort=col=>{
   // update header classes
   document.querySelectorAll('.prospect-table th').forEach(th=>{th.classList.remove('sort-asc','sort-desc');});
   const ths=document.querySelectorAll('.prospect-table th');
-  const colMap={name:0,birthYear:2,gender:4,status:6,calledCount:7,followUpDate:8};
+  const colMap={name:0,birthYear:2,gender:4,status:6,calledCount:7,followUpDate:8,appointmentDate:9};
   const idx=colMap[col];
   if(idx!==undefined&&ths[idx])ths[idx].classList.add(sortState.dir==='asc'?'sort-asc':'sort-desc');
   renderList();
@@ -2108,6 +2113,10 @@ function renderList(){
     const followUpCell=needsFollowUp(p)
       ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p.followUpDate||'Set date!'}</span>${fuTime}</span>`
       :`<span class="fu-date ${fuc}">${p.followUpDate||'—'}</span>${fuTime}`;
+    const apptTimeStr=p.appointmentTime?`<span style="font-size:10px;color:var(--dim);display:block">${p.appointmentTime}</span>`:'';
+    const apptCell=p.appointmentDate
+      ?`<span class="appt-date" style="color:#c084fc">${p.appointmentDate}</span>${apptTimeStr}`
+      :`<span class="appt-date" style="color:var(--muted)">—</span>`;
     return `<tr class="${cls}" data-id="${p.id}" style="animation-delay:${Math.min(i*.025,.4)}s"
         onclick="window._select('${p.id}')"
         ${hasNotes?`onmouseenter="window._showTip(event,'${esc(p.extraNotes?.replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
@@ -2136,6 +2145,7 @@ function renderList(){
         <span class="last-called">${daysSince(p.lastCalledDate)}</span>
       </td>
       <td class="fu-cell" onclick="event.stopPropagation();window._quickFU('${p.id}',this)">${followUpCell}</td>
+      <td class="appt-cell" onclick="event.stopPropagation();window._apptModal('${p.id}')">${apptCell}</td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-blue" title="Called"><input type="checkbox" ${p.pickedUp?'checked':''} onchange="window._flag('${p.id}','pickedUp',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-teal" title="Contacted"><input type="checkbox" ${p.contacted?'checked':''} onchange="window._flag('${p.id}','contacted',this.checked)"/><span class="tgl-box"></span></label></td>
       <td onclick="event.stopPropagation()"><label class="tgl tgl-purple" title="Meeting set"><input type="checkbox" ${p.meetingSet?'checked':''} onchange="window._flag('${p.id}','meetingSet',this.checked)"/><span class="tgl-box"></span></label></td>

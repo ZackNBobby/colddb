@@ -316,7 +316,7 @@
     .fu-cell{cursor:pointer;transition:background .15s;}
     .fu-cell:hover{background:rgba(240,165,0,.05);}
     .fu-cell:hover .fu-date:not(.fu-overdue):not(.fu-today){color:var(--gold)!important;}
-    .appt-cell{cursor:pointer;transition:background .15s;}
+    .appt-cell{cursor:pointer;transition:background .15s;white-space:nowrap;}
     .appt-cell:hover{background:rgba(192,132,252,.07);}
     .appt-cell:hover .appt-date{color:#c084fc!important;}
     .appt-date{font-size:11px;}
@@ -1263,6 +1263,7 @@ function toast(msg,dur=3500){const t=document.getElementById('toast');t.textCont
 function calcAge(by){return by?new Date().getFullYear()-by:'—';}
 function today(){return new Date().toISOString().slice(0,10);}
 function daysSince(d){if(!d)return 'Never';if(d===today())return 'Today';const n=Math.round((new Date(today())-new Date(d))/86400000);return n===1?'Yesterday':`${n}d ago`;}
+function fmtShortDate(d){if(!d)return'—';const[,m,day]=d.split('-');const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${parseInt(day,10)} ${mo[parseInt(m,10)-1]}`;}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
 function needsFollowUp(p){return p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';}
 function getSal(gender){const v=(gender||'').trim().toUpperCase().charAt(0);return v==='M'?'Mr':v==='F'?'Ms':'';}
@@ -2115,7 +2116,7 @@ function renderList(){
       :`<span class="fu-date ${fuc}">${p.followUpDate||'—'}</span>${fuTime}`;
     const apptTimeStr=p.appointmentTime?`<span style="font-size:10px;color:var(--dim);display:block">${p.appointmentTime}</span>`:'';
     const apptCell=p.appointmentDate
-      ?`<span class="appt-date" style="color:#c084fc">${p.appointmentDate}</span>${apptTimeStr}`
+      ?`<span class="appt-date" style="color:#c084fc;white-space:nowrap">${fmtShortDate(p.appointmentDate)}</span>${apptTimeStr}`
       :`<span class="appt-date" style="color:var(--muted)">—</span>`;
     return `<tr class="${cls}" data-id="${p.id}" style="animation-delay:${Math.min(i*.025,.4)}s"
         onclick="window._select('${p.id}')"

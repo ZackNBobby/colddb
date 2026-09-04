@@ -1301,7 +1301,7 @@ async function _getGTasksToken(){
       localStorage.setItem(GTOK_KEY,JSON.stringify({t:resp.access_token,exp:Date.now()+resp.expires_in*1000}));
       resolve(resp.access_token);
     };
-    _gTasksTokenClient.requestAccessToken({prompt:_gTasksToken?'':'consent'});
+    _gTasksTokenClient.requestAccessToken({prompt:''});
   });
 }
 
@@ -2224,7 +2224,7 @@ window._flag=async(id,field,val)=>{
   if(row){
     const tds=row.querySelectorAll('td');
     const setChk=(tdIdx,f)=>{const inp=tds[tdIdx]?.querySelector('.tgl input');if(inp)inp.checked=!!p2[f];};
-    setChk(9,'pickedUp');setChk(10,'contacted');setChk(11,'meetingSet');setChk(12,'met');setChk(13,'purchased');setChk(14,'referral');
+    setChk(10,'pickedUp');setChk(11,'contacted');setChk(12,'meetingSet');setChk(13,'met');setChk(14,'purchased');setChk(15,'referral');
     // Re-render follow-up cell if met/purchased changed (affects the pulse dot)
     if(pIdx>=0||field==='met'||field==='purchased'){
       const needsFU=p2.status==='Met'&&!p2.purchased;

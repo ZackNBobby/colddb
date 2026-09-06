@@ -704,6 +704,7 @@ onAuthStateChanged(auth,user=>{
     document.getElementById('app').classList.add('visible');
     document.getElementById('userEmail').textContent=user.email;
     loadAll();
+    startGTasksWarmup();
   }else{
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('app').classList.remove('visible');
@@ -1335,6 +1336,17 @@ function initGoogleTasks(){
 
 function _tryInitGTasks(){if(window.google?.accounts?.oauth2)initGoogleTasks();else setTimeout(_tryInitGTasks,300);}
 _tryInitGTasks();
+
+// Proactively renew the Calendar/Tasks pass in the background so it's already
+// fresh by the time you log a call or set an appt, instead of expiring mid-task.
+let _gtasksWarmupStarted=false;
+function _warmGTasksToken(){_getGTasksToken().catch(e=>console.warn('GTasks warmup:',e));}
+function startGTasksWarmup(){
+  if(_gtasksWarmupStarted)return;
+  _gtasksWarmupStarted=true;
+  _warmGTasksToken();
+  setInterval(_warmGTasksToken,45*60*1000); // re-check well before the ~1hr token expiry
+}
 
 async function _getGTasksToken(){
   try{const s=JSON.parse(localStorage.getItem(GTOK_KEY)||'null');if(s&&s.exp>Date.now()+60000){_gTasksToken=s.t;return s.t;}}catch(e){}

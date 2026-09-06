@@ -228,27 +228,26 @@
     .prospect-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;font-size:12px;transition:background .12s;background:transparent;overflow:hidden;}
     /* Column widths */
     .prospect-table th:nth-child(1){width:148px;}
-    .prospect-table th:nth-child(2){width:88px;}
+    .prospect-table th:nth-child(2){width:106px;}
     .prospect-table th:nth-child(3){width:34px;}
     .prospect-table th:nth-child(4){width:56px;}
     .prospect-table th:nth-child(5){width:34px;}
     .prospect-table th:nth-child(6){width:92px;}
     .prospect-table th:nth-child(7){width:88px;}
-    .prospect-table th:nth-child(8){width:66px;}
-    .prospect-table th:nth-child(9){width:74px;}
-    .prospect-table th:nth-child(10){width:56px;}
+    .prospect-table th:nth-child(8){width:62px;}
+    .prospect-table th:nth-child(9){width:46px;}
+    .prospect-table th:nth-child(10){width:28px;text-align:center;}
     .prospect-table th:nth-child(11){width:28px;text-align:center;}
     .prospect-table th:nth-child(12){width:28px;text-align:center;}
     .prospect-table th:nth-child(13){width:28px;text-align:center;}
     .prospect-table th:nth-child(14){width:28px;text-align:center;}
     .prospect-table th:nth-child(15){width:28px;text-align:center;}
-    .prospect-table th:nth-child(16){width:28px;text-align:center;}
+    .prospect-table td:nth-child(10){text-align:center;}
     .prospect-table td:nth-child(11){text-align:center;}
     .prospect-table td:nth-child(12){text-align:center;}
     .prospect-table td:nth-child(13){text-align:center;}
     .prospect-table td:nth-child(14){text-align:center;}
     .prospect-table td:nth-child(15){text-align:center;}
-    .prospect-table td:nth-child(16){text-align:center;}
     .prospect-table tbody tr{cursor:pointer;animation:rowIn .25s ease both;position:relative;}
     .prospect-table tbody tr:hover td{background:rgba(240,165,0,.04);}
     .prospect-table tbody tr:hover td:first-child{border-left:2px solid rgba(240,165,0,.3);}
@@ -604,7 +603,6 @@
                 <th onclick="window._sort('gender')">G</th>
                 <th onclick="window._togglePolicyFilter()" style="cursor:pointer" title="Click to filter by policy">Policies</th>
                 <th onclick="window._sort('status')">Status</th>
-                <th onclick="window._sort('calledCount')">Called</th>
                 <th onclick="window._sort('followUpDate')">Follow-up</th>
                 <th onclick="window._sort('appointmentDate')">Appt</th>
                 <th title="Called / picked up">📞</th>
@@ -1498,19 +1496,25 @@ window._apptModal=(pid)=>{
   document.getElementById('appt_date').focus();
 };
 
+// Deletes a Google Calendar event by id. Returns true if it's actually gone
+// (including "already gone" — 404/410), false if we genuinely couldn't confirm it.
+async function deleteGCalEvent(eventId){
+  if(!eventId)return true;
+  try{
+    const token=await _getGTasksToken();
+    const res=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,{
+      method:'DELETE',headers:{Authorization:`Bearer ${token}`}
+    });
+    return res.ok||res.status===404||res.status===410;
+  }catch(e){console.warn('Cal delete failed',e);return false;}
+}
+
 window._clearAppt=async(pid)=>{
   document.getElementById('apptModal')?.remove();
   const p=prospects.find(x=>x.id===pid);if(!p)return;
-  if(p.googleApptEventId){
-    try{
-      const token=await _getGTasksToken();
-      await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${p.googleApptEventId}`,{
-        method:'DELETE',headers:{Authorization:`Bearer ${token}`}
-      });
-    }catch(e){console.warn('Cal delete failed',e);}
-  }
+  const calOk=await deleteGCalEvent(p.googleApptEventId);
   await updateProspect(pid,{appointmentDate:null,appointmentTime:null,appointmentLocation:null,googleApptEventId:null},true);
-  toast('Appointment deleted');
+  toast(calOk?'Appointment deleted ✓':'⚠️ Cleared here, but the Calendar event may still exist — check Google Calendar.');
   renderList();
 };
 
@@ -2103,7 +2107,7 @@ window._sort=col=>{
   // update header classes
   document.querySelectorAll('.prospect-table th').forEach(th=>{th.classList.remove('sort-asc','sort-desc');});
   const ths=document.querySelectorAll('.prospect-table th');
-  const colMap={name:0,birthYear:2,gender:4,status:6,calledCount:7,followUpDate:8,appointmentDate:9};
+  const colMap={name:0,birthYear:2,gender:4,status:6,followUpDate:7,appointmentDate:8};
   const idx=colMap[col];
   if(idx!==undefined&&ths[idx])ths[idx].classList.add(sortState.dir==='asc'?'sort-asc':'sort-desc');
   renderList();
@@ -2225,11 +2229,6 @@ function renderList(){
       <td style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(policyText)}">${esc(policyText)}</td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
         <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>
-      </td>
-      <td>
-        <span class="call-btn" onclick="event.stopPropagation();window._addCall('${p.id}')">📞 +1</span>
-        <span class="call-count" style="font-size:10px;color:var(--dim);margin-left:3px">${p.calledCount||0}x</span>
-        <span class="last-called">${daysSince(p.lastCalledDate)}</span>
       </td>
       <td class="fu-cell" onclick="event.stopPropagation();window._quickFU('${p.id}',this)">${followUpCell}</td>
       <td class="appt-cell" onclick="event.stopPropagation();window._apptModal('${p.id}')">${apptCell}</td>
@@ -2467,10 +2466,18 @@ window._saveDetail=async(id,type)=>{
   if(type==='axs'){upd.savings=document.getElementById('d_savings').value;upd.priorities=document.getElementById('d_priorities').value.trim();}
   else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
   const fuChanged=newFU&&newFU!==(p.followUpDate||'');
+  // Clearing the appointment date here should also drop it from Google Calendar,
+  // same as the dedicated Delete Appt button does.
+  const apptCleared=p.appointmentDate&&!newAppt;
+  if(apptCleared){upd.appointmentTime=null;upd.appointmentLocation=null;upd.googleApptEventId=null;}
   await updateProspect(id,upd);
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
   toast('Saved ✓');
   if(fuChanged){const p3=prospects.find(x=>x.id===id)||{...p,...upd};syncFollowUpToGTasks(p3);}
+  if(apptCleared){
+    const calOk=await deleteGCalEvent(p.googleApptEventId);
+    if(!calOk)toast('⚠️ Appointment cleared, but the Calendar event may still exist — check Google Calendar.');
+  }
 };
 
 window._addNote=async(id)=>{

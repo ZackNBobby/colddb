@@ -1458,14 +1458,16 @@ async function syncApptToGoogleCalendar(prospect,apptDate,apptTime,location){
       reminders:{useDefault:false,overrides:[{method:'popup',minutes:1440}]} // 1 day before
     };
     const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+    let isUpdate=false;
     if(prospect.googleApptEventId){
+      isUpdate=true;
       await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${prospect.googleApptEventId}`,{method:'PUT',headers,body:JSON.stringify(event)});
     }else{
       const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{method:'POST',headers,body:JSON.stringify(event)});
       const ev=await res.json();
       if(ev.id)await updateProspect(prospect.id,{googleApptEventId:ev.id},true);
     }
-    toast('📅 Appointment added to Calendar ✓');
+    toast(isUpdate?'📅 Calendar event updated to new date/time ✓':'📅 Appointment added to Calendar ✓');
   }catch(e){console.warn('Appt calendar sync:',e);toast('⚠️ Calendar: '+(e.message||e));}
 }
 
@@ -2508,6 +2510,9 @@ window._saveDetail=async(id,type)=>{
   // Clearing the appointment date here should also drop it from Google Calendar,
   // same as the dedicated Delete Appt button does.
   const apptCleared=p.appointmentDate&&!newAppt;
+  // Changing it to a different date (reschedule) should update the existing Calendar
+  // event in place, same as re-confirming through the Appt modal does.
+  const apptRescheduled=newAppt&&newAppt!==(p.appointmentDate||'');
   if(apptCleared){upd.appointmentTime=null;upd.appointmentLocation=null;upd.googleApptEventId=null;}
   await updateProspect(id,upd);
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
@@ -2516,6 +2521,10 @@ window._saveDetail=async(id,type)=>{
   if(apptCleared){
     const calOk=await deleteGCalEvent(p.googleApptEventId);
     if(!calOk)toast('⚠️ Appointment cleared, but the Calendar event may still exist — check Google Calendar.');
+  }
+  if(apptRescheduled){
+    const p3=prospects.find(x=>x.id===id)||{...p,...upd};
+    await syncApptToGoogleCalendar(p3,newAppt,p.appointmentTime||'09:00',p.appointmentLocation||'Our Office');
   }
 };
 

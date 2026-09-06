@@ -118,12 +118,19 @@
     .batch-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(240,165,0,.04),transparent);opacity:0;transition:opacity .2s;pointer-events:none;}
     .batch-card:hover{border-color:var(--gold-border);transform:translateY(-3px);box-shadow:0 8px 32px rgba(240,165,0,.1);}
     .batch-card:hover::before{opacity:1;}
+    /* Organic (warm lead) fire theme */
+    .batch-card.type-organic{border-color:rgba(255,90,20,.3);background:linear-gradient(165deg,rgba(46,12,4,.85),rgba(6,13,24,.8) 65%);}
+    .batch-card.type-organic::after{content:'';position:absolute;left:-10%;right:-10%;bottom:-20%;height:65%;background:radial-gradient(ellipse at 50% 100%,rgba(255,110,30,.4),rgba(255,60,0,.14) 45%,transparent 72%);filter:blur(3px);animation:fireFlicker 2.6s ease-in-out infinite;pointer-events:none;}
+    @keyframes fireFlicker{0%,100%{opacity:.7;transform:scale(1,1);}50%{opacity:1;transform:scale(1.04,1.08);}}
+    .batch-card.type-organic:hover{border-color:rgba(255,130,40,.55);box-shadow:0 8px 36px rgba(255,90,20,.22);}
+    .batch-card.type-organic .batch-card-name{text-shadow:0 0 14px rgba(255,140,50,.3);}
     .batch-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
     .batch-card-name{font-size:17px;font-weight:800;color:var(--text);}
     .batch-type-tag{font-size:10px;font-weight:700;border-radius:5px;padding:2px 7px;}
     .tag-ekko{background:rgba(240,165,0,.12);color:var(--gold);border:1px solid rgba(240,165,0,.2);}
     .tag-axs{background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.25);}
     .tag-other{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.25);}
+    .tag-organic{background:rgba(255,90,20,.14);color:#ff9d52;border:1px solid rgba(255,90,20,.32);}
     .batch-card-count{font-size:24px;font-weight:900;color:var(--text);margin-bottom:2px;}
     .batch-card-sub{font-size:11px;color:var(--dim);margin-bottom:10px;}
     .batch-funnel{display:flex;flex-direction:column;gap:4px;}
@@ -277,6 +284,7 @@
     .batch-tag{display:inline-block;background:rgba(14,24,40,.9);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 6px;font-size:10px;color:var(--dim);font-weight:600;}
     .axs-tag{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:#c084fc;}
     .other-tag{background:rgba(20,184,166,.1);border-color:rgba(20,184,166,.25);color:var(--teal);}
+    .organic-tag{background:rgba(255,90,20,.1);border-color:rgba(255,90,20,.3);color:#ff9d52;}
 
     .status-badge{display:inline-flex;align-items:center;gap:3px;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer;transition:filter .15s;user-select:none;}
     .status-badge:hover{filter:brightness(1.2);}
@@ -459,6 +467,7 @@
     .tag-ekko-sm{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.25);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
     .tag-axs-sm{background:rgba(192,132,252,.12);color:#c084fc;border:1px solid rgba(192,132,252,.25);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
     .tag-other-sm{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.25);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
+    .tag-organic-sm{background:rgba(255,90,20,.14);color:#ff9d52;border:1px solid rgba(255,90,20,.32);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
     /* Closings grouped layout */
     .cl-section{margin-bottom:22px;}
     .cl-batch-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:rgba(240,165,0,.06);border:1px solid rgba(240,165,0,.14);border-radius:10px;margin-bottom:8px;}
@@ -683,8 +692,8 @@ function knownBatchTypes(){
   return['ekko','axs',...custom.sort()];
 }
 function typeLabel(type){return type==='ekko'?'Ekko':type==='axs'?'AXS':(type||'').charAt(0).toUpperCase()+(type||'').slice(1);}
-function typeTagClass(type,size){return type==='ekko'?`tag-ekko${size||''}`:type==='axs'?`tag-axs${size||''}`:`tag-other${size||''}`;}
-function batchAccentClass(type){return type==='axs'?'axs-tag':(type&&type!=='ekko')?'other-tag':'';}
+function typeTagClass(type,size){return type==='ekko'?`tag-ekko${size||''}`:type==='axs'?`tag-axs${size||''}`:type==='organic'?`tag-organic${size||''}`:`tag-other${size||''}`;}
+function batchAccentClass(type){return type==='axs'?'axs-tag':type==='organic'?'organic-tag':(type&&type!=='ekko')?'other-tag':'';}
 function getBatchType(batchName){return(batches.find(b=>b.name===batchName)||{}).type||'ekko';}
 function setViewTheme(theme){document.body.classList.toggle('theme-organic',theme==='organic');}
 
@@ -1647,7 +1656,7 @@ window._waQuickOpen=async(pid,type)=>{
   if(row){const lc=row.querySelector('.last-called');if(lc)lc.textContent='Today';}
 };
 
-function templateColor(type){return type==='ekko'?'var(--gold)':type==='axs'?'#c084fc':'var(--teal)';}
+function templateColor(type){return type==='ekko'?'var(--gold)':type==='axs'?'#c084fc':type==='organic'?'#ff9d52':'var(--teal)';}
 
 window._templatesModal=()=>{
   const existing=document.getElementById('templatesModal');
@@ -1870,7 +1879,7 @@ function renderBatchGrid(){
     if(apptToday.length)apptBadge=`<div class="appt-badge today"><span class="appt-ping"></span>${apptToday.length} appt today!</div>`;
     else if(apptSoon.length)apptBadge=`<div class="appt-badge soon"><span class="appt-ping"></span>${apptSoon.length} appt in 3 days</div>`;
     else if(apptWeek.length)apptBadge=`<div class="appt-badge week"><span class="appt-ping"></span>${apptWeek.length} appt this fortnight</div>`;
-    html+=`<div class="batch-card" data-bname="${esc(b.name)}">
+    html+=`<div class="batch-card ${b.type==='organic'?'type-organic':''}" data-bname="${esc(b.name)}">
       ${apptBadge}
       <div class="batch-card-actions">
         <div class="batch-action-btn" data-action="rename" data-bid="${b.id}" title="Rename">✎</div>

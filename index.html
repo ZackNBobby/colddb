@@ -29,6 +29,17 @@
     .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1px);background-size:28px 28px;}
     .bg-vignette{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 30%,rgba(1,3,8,.45) 100%);}
 
+    /* ── Organic (warm lead) theme — subtle exclusive ambient glow ── */
+    .warm-scene{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .7s ease;}
+    body.theme-organic .warm-scene{opacity:1;}
+    .warm-orb{position:absolute;border-radius:50%;filter:blur(90px);animation:warmDrift 24s ease-in-out infinite;}
+    .warm-orb-1{width:520px;height:520px;background:radial-gradient(circle,rgba(255,183,77,.32),rgba(240,165,0,.12) 50%,transparent 70%);top:-60px;right:-60px;}
+    .warm-orb-2{width:420px;height:420px;background:radial-gradient(circle,rgba(255,140,60,.26),rgba(240,120,0,.1) 50%,transparent 70%);bottom:-80px;left:-40px;animation-duration:30s;animation-delay:-10s;}
+    @keyframes warmDrift{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-30px,25px) scale(1.07);}}
+    .warm-sweep{position:absolute;inset:-20%;background:conic-gradient(from 0deg,transparent 0deg,rgba(255,196,64,.05) 60deg,transparent 140deg,transparent 360deg);animation:warmSweep 18s linear infinite;}
+    @keyframes warmSweep{to{transform:rotate(360deg);}}
+    body.theme-organic .topbar{box-shadow:0 1px 0 rgba(255,183,77,.25),0 0 24px rgba(255,160,40,.06);}
+
     /* ── Auth ── */
     #authScreen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;}
     .auth-card{position:relative;background:rgba(6,13,24,.82);border:1px solid rgba(240,165,0,.2);border-radius:24px;padding:52px 44px;text-align:center;max-width:420px;width:90%;backdrop-filter:blur(32px);box-shadow:0 0 80px rgba(240,165,0,.08),0 32px 80px rgba(0,0,0,.6);animation:cardIn .5s cubic-bezier(.34,1.56,.64,1) both;}
@@ -112,6 +123,7 @@
     .batch-type-tag{font-size:10px;font-weight:700;border-radius:5px;padding:2px 7px;}
     .tag-ekko{background:rgba(240,165,0,.12);color:var(--gold);border:1px solid rgba(240,165,0,.2);}
     .tag-axs{background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.25);}
+    .tag-other{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.25);}
     .batch-card-count{font-size:24px;font-weight:900;color:var(--text);margin-bottom:2px;}
     .batch-card-sub{font-size:11px;color:var(--dim);margin-bottom:10px;}
     .batch-funnel{display:flex;flex-direction:column;gap:4px;}
@@ -264,6 +276,7 @@
 
     .batch-tag{display:inline-block;background:rgba(14,24,40,.9);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 6px;font-size:10px;color:var(--dim);font-weight:600;}
     .axs-tag{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:#c084fc;}
+    .other-tag{background:rgba(20,184,166,.1);border-color:rgba(20,184,166,.25);color:var(--teal);}
 
     .status-badge{display:inline-flex;align-items:center;gap:3px;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer;transition:filter .15s;user-select:none;}
     .status-badge:hover{filter:brightness(1.2);}
@@ -419,9 +432,10 @@
     .sales-source-card{background:rgba(10,20,36,.7);border:1px solid rgba(240,165,0,.12);border-radius:16px;padding:20px 22px;}
     .sales-source-card.ekko{border-color:rgba(96,165,250,.2);background:rgba(96,165,250,.04);}
     .sales-source-card.axs{border-color:rgba(192,132,252,.2);background:rgba(192,132,252,.04);}
+    .sales-source-card.other{border-color:rgba(20,184,166,.2);background:rgba(20,184,166,.04);}
     .sales-source-card.total{border-color:rgba(240,165,0,.2);background:rgba(240,165,0,.04);}
     .ssc-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-    .ssc-title.ekko{color:#60a5fa;}.ssc-title.axs{color:#c084fc;}.ssc-title.total{color:var(--gold);}
+    .ssc-title.ekko{color:#60a5fa;}.ssc-title.axs{color:#c084fc;}.ssc-title.other{color:var(--teal);}.ssc-title.total{color:var(--gold);}
     .ssc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     .ssc-metric{display:flex;flex-direction:column;gap:3px;}
     .ssc-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
@@ -444,6 +458,7 @@
     .closing-action.del:hover{color:#f87171;}
     .tag-ekko-sm{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.25);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
     .tag-axs-sm{background:rgba(192,132,252,.12);color:#c084fc;border:1px solid rgba(192,132,252,.25);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
+    .tag-other-sm{background:rgba(20,184,166,.12);color:var(--teal);border:1px solid rgba(20,184,166,.25);padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.04em;}
     /* Closings grouped layout */
     .cl-section{margin-bottom:22px;}
     .cl-batch-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:rgba(240,165,0,.06);border:1px solid rgba(240,165,0,.14);border-radius:10px;margin-bottom:8px;}
@@ -464,6 +479,10 @@
 <div class="bg-scene">
   <div class="orb orb-1"></div><div class="orb orb-2"></div>
   <div class="orb orb-3"></div><div class="orb orb-4"></div>
+</div>
+<div class="warm-scene">
+  <div class="warm-orb warm-orb-1"></div><div class="warm-orb warm-orb-2"></div>
+  <div class="warm-sweep"></div>
 </div>
 <div class="bg-grid"></div>
 <div class="bg-vignette"></div>
@@ -658,6 +677,17 @@ const DEFAULT_BATCHES=[
   {name:'AXS Leads 3',type:'axs'},{name:'AXS Leads 4',type:'axs'},
 ];
 
+// ── Batch types (ekko/axs are built-in; others are user-created and share generic styling) ──
+function knownBatchTypes(){
+  const custom=[...new Set(batches.map(b=>b.type).filter(t=>t&&t!=='ekko'&&t!=='axs'))];
+  return['ekko','axs',...custom.sort()];
+}
+function typeLabel(type){return type==='ekko'?'Ekko':type==='axs'?'AXS':(type||'').charAt(0).toUpperCase()+(type||'').slice(1);}
+function typeTagClass(type,size){return type==='ekko'?`tag-ekko${size||''}`:type==='axs'?`tag-axs${size||''}`:`tag-other${size||''}`;}
+function batchAccentClass(type){return type==='axs'?'axs-tag':(type&&type!=='ekko')?'other-tag':'';}
+function getBatchType(batchName){return(batches.find(b=>b.name===batchName)||{}).type||'ekko';}
+function setViewTheme(theme){document.body.classList.toggle('theme-organic',theme==='organic');}
+
 // ── Auth ──
 onAuthStateChanged(auth,user=>{
   if(user){
@@ -809,6 +839,7 @@ async function loadClosings(){
 
 function showSales(){
   currentView='sales';
+  setViewTheme(null);
   document.getElementById('dashView').style.display='none';
   document.getElementById('prospectView').style.display='none';
   document.getElementById('salesView').style.display='block';
@@ -830,8 +861,10 @@ function fmtK(n){const v=Number(n||0);return v>=1000?'S$'+(v/1000).toFixed(1)+'k
 function renderSales(){
   const ekkoProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type==='ekko';});
   const axsProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type==='axs';});
+  const otherProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type!=='ekko'&&b.type!=='axs';});
   const ekkoC=closings.filter(c=>c.batchType==='ekko');
   const axsC=closings.filter(c=>c.batchType==='axs');
+  const otherC=closings.filter(c=>c.batchType&&c.batchType!=='ekko'&&c.batchType!=='axs');
   const allC=closings;
 
   function stats(list,leadCount){
@@ -847,6 +880,7 @@ function renderSales(){
   }
   const ek=stats(ekkoC,ekkoProspects.length);
   const ax=stats(axsC,axsProspects.length);
+  const oth=stats(otherC,otherProspects.length);
   const tot=stats(allC,prospects.length);
 
   // Determine winner per metric (higher = better for all)
@@ -860,10 +894,11 @@ function renderSales(){
   const wAvg=winner(ek.avgApe,ax.avgApe);
 
   function sourceCard(type,s,leads,w){
-    const color=type==='ekko'?'#60a5fa':'#c084fc';
-    const label=type==='ekko'?'EKKO':'AXS';
-    return`<div class="sales-source-card ${type}">
-      <div class="ssc-title ${type}">${label} <span style="color:var(--dim);font-size:10px;font-weight:400">${leads} leads</span></div>
+    const color=type==='ekko'?'#60a5fa':type==='axs'?'#c084fc':'#14b8a6';
+    const label=type==='ekko'?'EKKO':type==='axs'?'AXS':'OTHER';
+    const cls=type==='ekko'||type==='axs'?type:'other';
+    return`<div class="sales-source-card ${cls}">
+      <div class="ssc-title ${cls}">${label} <span style="color:var(--dim);font-size:10px;font-weight:400">${leads} leads</span></div>
       <div class="ssc-grid">
         <div class="ssc-metric"><div class="ssc-label">Closings</div><div class="ssc-value">${s.n}</div></div>
         <div class="ssc-metric"><div class="ssc-label">Total APE</div><div class="ssc-value">${fmtK(s.ape)}</div></div>
@@ -897,9 +932,11 @@ function renderSales(){
     </div>
   </div>`;
 
+  const otherCard=(otherProspects.length||otherC.length)?sourceCard('other',oth,otherProspects.length,{}):'';
   document.getElementById('salesHero').innerHTML=
     sourceCard('ekko',ek,ekkoProspects.length,{ape:wApe.ek,comm:wComm.ek,close:wClose.ek,avg:wAvg.ek})+
     sourceCard('axs',ax,axsProspects.length,{ape:wApe.ax,comm:wComm.ax,close:wClose.ax,avg:wAvg.ax})+
+    otherCard+
     totalCard;
 
   const container=document.getElementById('closingsContainer');
@@ -930,7 +967,7 @@ function renderSales(){
     const batchAPE=allE.reduce((s,c)=>s+(Number(c.ape)||0),0);
     const batchComm=allE.reduce((s,c)=>s+(Number(c.commission)||0),0);
     const btype=allE[0]?.batchType;
-    const srcTag=btype?`<span class="${btype==='ekko'?'tag-ekko-sm':'tag-axs-sm'}" style="margin-left:8px">${btype==='ekko'?'EKKO':'AXS'}</span>`:'';
+    const srcTag=btype?`<span class="${typeTagClass(btype,'-sm')}" style="margin-left:8px">${typeLabel(btype).toUpperCase()}</span>`:'';
 
     html+=`<div class="cl-section">
       <div class="cl-batch-hdr">
@@ -994,7 +1031,7 @@ function closingModal(existing=null){
   // cmRiders: [{name, term, premium}]
   let cmRiders=(existing?.riders||[]).map(r=>({...r}));
 
-  const batchOpts=batches.map(b=>`<option value="${esc(b.name)}|${b.type}" ${existing&&existing.batchName===b.name?'selected':''}>${esc(b.name)} (${b.type==='ekko'?'EKKO':'AXS'})</option>`).join('');
+  const batchOpts=batches.map(b=>`<option value="${esc(b.name)}|${b.type}" ${existing&&existing.batchName===b.name?'selected':''}>${esc(b.name)} (${typeLabel(b.type).toUpperCase()})</option>`).join('');
   const prodOpts=PROD_CATS.map(cat=>`<optgroup label="${esc(cat.label)}">${cat.products.map(p=>`<option value="${esc(p)}" ${existing?.product===p?'selected':''}>${esc(p)}</option>`).join('')}</optgroup>`).join('');
   const selProd=existing?.product?PROD[existing.product]:null;
   const termOpts=selProd?selProd.terms.map(t=>`<option value="${esc(t.l)}" ${existing?.term===t.l?'selected':''}>${esc(t.l)} — ${t.y}%</option>`).join(''):'';
@@ -1375,9 +1412,7 @@ async function syncApptToGoogleCalendar(prospect,apptDate,apptTime,location){
     const token=await _getGTasksToken();
     const sal=getSal(prospect.gender);
     const fullName=[sal,prospect.preferredName||prospect.name].filter(Boolean).join(' ');
-    const batchObj=batches.find(b=>b.name===prospect.batch);
-    const isAXSBatch=batchObj?batchObj.type==='axs':(prospect.batch||'').toLowerCase().includes('axs');
-    const batchTag=prospect.batch?` (${isAXSBatch?'AXS':'Ekko'})`:'';
+    const batchTag=prospect.batch?` (${typeLabel(getBatchType(prospect.batch))})`:'';
     const summary=`${fullName}${batchTag} - 1`;
     const [h,m]=apptTime.split(':').map(Number);
     const endMin=h*60+m+60;
@@ -1408,7 +1443,7 @@ async function syncApptToGoogleCalendar(prospect,apptDate,apptTime,location){
 window._apptModal=(pid)=>{
   const p=prospects.find(x=>x.id===pid);if(!p)return;
   const existing=document.getElementById('apptModal');if(existing)existing.remove();
-  const isAXS=(p.batch||'').toLowerCase().includes('axs');
+  const btype=getBatchType(p.batch);
   const sal=getSal(p.gender);
   const displayName=`${sal} ${p.preferredName||p.name}`.trim();
   const hasAppt=!!p.appointmentDate;
@@ -1434,7 +1469,7 @@ window._apptModal=(pid)=>{
     <div class="modal-footer">
       ${hasAppt?`<button class="btn btn-ghost" style="color:#f87171;border-color:rgba(248,113,113,.3)" onclick="window._clearAppt('${pid}')">✕ Delete Appt</button>`:''}
       <button class="btn btn-ghost" onclick="document.getElementById('apptModal').remove()">Cancel</button>
-      <button class="btn btn-primary" onclick="window._confirmAppt('${pid}','${isAXS?'axs':'ekko'}')">Confirm & Send WhatsApp</button>
+      <button class="btn btn-primary" onclick="window._confirmAppt('${pid}','${btype}')">Confirm & Send WhatsApp</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
@@ -1489,8 +1524,7 @@ window._confirmAppt=async(pid,type)=>{
   }
   if(selectedId===pid){const p2=prospects.find(x=>x.id===pid);if(p2)renderDetailContent(p2);}
   // Send WhatsApp
-  const tplKey=(type==='axs'?'axs':'ekko')+'_appt';
-  const tpl=msgTemplates[tplKey]||'';
+  const tpl=lookupTemplate(type,'appt');
   if(tpl){
     const msg=resolveTemplate(tpl,p,{date:dateFmt,time:timeFmt,location});
     const n=(p.phone||'').replace(/\D/g,'');
@@ -1509,6 +1543,7 @@ const SAVINGS_OPTS=['Below S$999','S$1,000 - S$2,499','S$2,500 - S$3,999','Above
 function statusCls(s){return 's-'+(s||'New').replace(/\s/g,'');}
 function waLink(phone){const n=(phone||'').replace(/\D/g,'');return n?`https://wa.me/65${n}`:'#';}
 
+function lookupTemplate(type,kind){return msgTemplates[type+'_'+kind]||msgTemplates['ekko_'+kind]||'';}
 function resolveTemplate(tpl,p,extra={}){
   const sal=getSal(p.gender);
   const name=p.preferredName||p.name||'';
@@ -1595,9 +1630,7 @@ window._saveFU=async(pid,newDate,newTime='')=>{
 window._waQuickOpen=async(pid,type)=>{
   const p=prospects.find(x=>x.id===pid);
   if(!p||!p.phone){toast('No phone number for this lead');return;}
-  const isAXS=(p.batch||'').toLowerCase().includes('axs');
-  const key=(isAXS?'axs':'ekko')+'_'+type;
-  const tpl=msgTemplates[key]||'';
+  const tpl=lookupTemplate(getBatchType(p.batch),type);
   if(!tpl){toast('No template set — click 💬 to add one.');return;}
   const msg=resolveTemplate(tpl,p);
   const n=(p.phone||'').replace(/\D/g,'');
@@ -1614,37 +1647,35 @@ window._waQuickOpen=async(pid,type)=>{
   if(row){const lc=row.querySelector('.last-called');if(lc)lc.textContent='Today';}
 };
 
+function templateColor(type){return type==='ekko'?'var(--gold)':type==='axs'?'#c084fc':'var(--teal)';}
+
 window._templatesModal=()=>{
   const existing=document.getElementById('templatesModal');
   if(existing)existing.remove();
   const ov=document.createElement('div');
   ov.className='modal-bg';
   ov.id='templatesModal';
+  const sections=knownBatchTypes().map(type=>{
+    const color=templateColor(type);
+    const label=typeLabel(type).toUpperCase();
+    return`<div>
+        <span class="tmpl-label" style="color:${color}">📵 ${label} — Missed Call</span>
+        <textarea id="tmpl_${type}_missed" class="tmpl-textarea">${esc(msgTemplates[type+'_missed']||'')}</textarea>
+      </div>
+      <div>
+        <span class="tmpl-label" style="color:${color}">📅 ${label} — Appointment Set</span>
+        <textarea id="tmpl_${type}_appt" class="tmpl-textarea">${esc(msgTemplates[type+'_appt']||'')}</textarea>
+      </div>`;
+  }).join('');
   ov.innerHTML=`<div class="modal" style="max-width:580px" onclick="event.stopPropagation()">
     <h2>💬 WhatsApp Message Templates</h2>
     <div style="font-size:11px;color:var(--dim);margin-bottom:20px;line-height:1.6">
       Placeholders: <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{salutation}</code> → Mr / Ms &nbsp;|&nbsp;
       <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{name}</code> → lead name<br>
-      <span style="opacity:.7">e.g. "Hi {salutation} {name}, I tried calling you just now..."</span>
+      <span style="opacity:.7">e.g. "Hi {salutation} {name}, I tried calling you just now..."</span><br>
+      <span style="opacity:.7">Leave a type's templates blank to fall back to the EKKO templates.</span>
     </div>
-    <div style="display:grid;gap:16px">
-      <div>
-        <span class="tmpl-label" style="color:var(--gold)">📵 EKKO — Missed Call</span>
-        <textarea id="tmpl_ekko_missed" class="tmpl-textarea">${esc(msgTemplates.ekko_missed||'')}</textarea>
-      </div>
-      <div>
-        <span class="tmpl-label" style="color:var(--gold)">📅 EKKO — Appointment Set</span>
-        <textarea id="tmpl_ekko_appt" class="tmpl-textarea">${esc(msgTemplates.ekko_appt||'')}</textarea>
-      </div>
-      <div>
-        <span class="tmpl-label" style="color:#c084fc">📵 AXS — Missed Call</span>
-        <textarea id="tmpl_axs_missed" class="tmpl-textarea">${esc(msgTemplates.axs_missed||'')}</textarea>
-      </div>
-      <div>
-        <span class="tmpl-label" style="color:#c084fc">📅 AXS — Appointment Set</span>
-        <textarea id="tmpl_axs_appt" class="tmpl-textarea">${esc(msgTemplates.axs_appt||'')}</textarea>
-      </div>
-    </div>
+    <div style="display:grid;gap:16px">${sections}</div>
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="window._saveTemplates()">Save Templates</button>
       <button class="btn btn-ghost" onclick="document.getElementById('templatesModal').remove()">Cancel</button>
@@ -1655,12 +1686,12 @@ window._templatesModal=()=>{
 };
 
 window._saveTemplates=async()=>{
-  msgTemplates={
-    ekko_missed:document.getElementById('tmpl_ekko_missed').value.trim(),
-    ekko_appt:document.getElementById('tmpl_ekko_appt').value.trim(),
-    axs_missed:document.getElementById('tmpl_axs_missed').value.trim(),
-    axs_appt:document.getElementById('tmpl_axs_appt').value.trim(),
-  };
+  const updated={};
+  knownBatchTypes().forEach(type=>{
+    updated[type+'_missed']=document.getElementById(`tmpl_${type}_missed`).value.trim();
+    updated[type+'_appt']=document.getElementById(`tmpl_${type}_appt`).value.trim();
+  });
+  msgTemplates={...msgTemplates,...updated};
   try{
     await setDoc(doc(db,'settings','msgTemplates'),msgTemplates);
     document.getElementById('templatesModal')?.remove();
@@ -1679,15 +1710,14 @@ window._dashSearch=q=>{
     return hay.includes(term);
   }).slice(0,30);
   if(!hits.length){res.style.display='block';res.innerHTML='<div style="padding:14px 16px;color:var(--dim);font-size:13px">No results</div>';return;}
-  const isAXSBatch=b=>(batches.find(x=>x.name===b)||{}).type==='axs';
   res.style.display='block';
   res.innerHTML=hits.map(p=>{
     const c=STATUS_COLOR[p.status]||'#9aa3b0';
-    const axs=isAXSBatch(p.batch);
+    const accent=batchAccentClass(getBatchType(p.batch));
     return `<div onclick="window._dashGoTo('${p.id}')" style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s" onmouseenter="this.style.background='rgba(240,165,0,.06)'" onmouseleave="this.style.background='transparent'">
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'—')}${p.preferredName?` <span style="color:var(--dim);font-weight:400;font-size:11px">aka ${esc(p.preferredName)}</span>`:''}</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:1px">${esc(p.phone||'')}${p.phone&&p.batch?' · ':''}<span class="batch-tag ${axs?'axs-tag':''}" style="font-size:9px">${esc(p.batch||'')}</span></div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1px">${esc(p.phone||'')}${p.phone&&p.batch?' · ':''}<span class="batch-tag ${accent}" style="font-size:9px">${esc(p.batch||'')}</span></div>
       </div>
       <span style="font-size:10px;font-weight:700;color:${c};background:${c}22;border-radius:5px;padding:2px 7px;flex-shrink:0">${esc(p.status||'New')}</span>
     </div>`;
@@ -1703,6 +1733,7 @@ window._dashGoTo=id=>{
 
 function showDashboard(){
   currentView='dashboard';
+  setViewTheme(null);
   document.getElementById('dashView').style.display='block';
   document.getElementById('prospectView').style.display='none';
   document.getElementById('salesView').style.display='none';
@@ -1721,6 +1752,7 @@ function showProspects(batchName=''){
   currentView='prospects';
   activeBatch=batchName;
   selectedId=null;
+  setViewTheme(batchName?getBatchType(batchName):null);
   document.getElementById('dashView').style.display='none';
   document.getElementById('salesView').style.display='none';
   document.getElementById('prospectView').style.display='flex';
@@ -1850,7 +1882,7 @@ function renderBatchGrid(){
           <div class="batch-card-name">${esc(b.name)}</div>
           <div class="batch-date-btn ${b.leadsDate?'batch-date-set':''}" data-action="date" data-bid="${b.id}">📅 ${b.leadsDate?fmtLeadsDate(b.leadsDate):'Set leads date'}</div>
         </div>
-        <span class="batch-type-tag ${b.type==='axs'?'tag-axs':'tag-ekko'}">${b.type==='axs'?'AXS':'Ekko'}</span>
+        <span class="batch-type-tag ${typeTagClass(b.type)}">${typeLabel(b.type)}</span>
       </div>
       <div class="batch-card-count">${total}</div>
       <div class="batch-card-sub">${total===1?'prospect':'prospects'}</div>
@@ -1934,11 +1966,13 @@ function setupBatchDrag(){
 // Batch actions
 window._addBatch=()=>{
   const modal=document.createElement('div');modal.className='modal-bg';modal.id='batchModal';
+  const typeOpts=knownBatchTypes().map(t=>`<option value="${esc(t)}">${esc(typeLabel(t))}</option>`).join('');
   modal.innerHTML=`<div class="modal"><h2>Add New Batch</h2>
     <div class="field-row single"><div class="fg"><label>Batch Name</label><input id="bm_name" placeholder="e.g. 2026G or AXS Leads 5"/></div></div>
     <div class="field-row single"><div class="fg"><label>Type</label>
-      <select id="bm_type"><option value="ekko">Ekko</option><option value="axs">AXS</option></select>
+      <select id="bm_type" onchange="window._toggleNewType()">${typeOpts}<option value="__new__">+ New type…</option></select>
     </div></div>
+    <div class="field-row single" id="bm_newTypeRow" style="display:none"><div class="fg"><label>New Type Name</label><input id="bm_newType" placeholder="e.g. Referral"/></div></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="document.getElementById('batchModal').remove()">Cancel</button>
       <button class="btn btn-primary" onclick="window._submitBatch()">Add Batch</button>
@@ -1946,10 +1980,20 @@ window._addBatch=()=>{
   document.body.appendChild(modal);
   setTimeout(()=>document.getElementById('bm_name')?.focus(),50);
 };
+window._toggleNewType=()=>{
+  const isNew=document.getElementById('bm_type').value==='__new__';
+  const row=document.getElementById('bm_newTypeRow');
+  row.style.display=isNew?'':'none';
+  if(isNew)setTimeout(()=>document.getElementById('bm_newType')?.focus(),50);
+};
 window._submitBatch=async()=>{
   const name=document.getElementById('bm_name').value.trim();
-  const type=document.getElementById('bm_type').value;
+  let type=document.getElementById('bm_type').value;
   if(!name){toast('Enter a batch name');return;}
+  if(type==='__new__'){
+    type=document.getElementById('bm_newType').value.trim().toLowerCase().replace(/\s+/g,'-');
+    if(!type){toast('Enter a name for the new type');return;}
+  }
   document.getElementById('batchModal')?.remove();
   await addBatch(name,type);
 };
@@ -2155,7 +2199,7 @@ function renderList(){
         </div>`:''}
       </td>
       <td style="color:var(--muted)">${calcAge(p.birthYear)}</td>
-      <td><span class="batch-tag ${isAXS?'axs-tag':''}">${esc(p.batch||'—')}</span></td>
+      <td><span class="batch-tag ${batchAccentClass(p.leadType)}">${esc(p.batch||'—')}</span></td>
       <td style="color:${gColor};font-weight:700;font-size:11px">${gNorm||'—'}</td>
       <td style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(policyText)}">${esc(policyText)}</td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
@@ -2322,7 +2366,7 @@ function renderDetailContent(p){
     <div class="d-name">${esc(p.name)}</div>
     <div class="d-meta">
       <span class="d-meta-chip">${esc(p.batch||'—')}</span>
-      <span class="d-meta-chip" style="${isAXS?'color:#c084fc':''}">${isAXS?'AXS':'Ekko'}</span>
+      <span class="d-meta-chip" style="color:${templateColor(p.leadType||'ekko')}">${typeLabel(p.leadType||'ekko')}</span>
       <span class="d-meta-chip">Age ${calcAge(p.birthYear)}</span>
     </div>
     <div class="d-section">
@@ -2456,7 +2500,8 @@ window._submitAdd=async()=>{
   if(!batch){toast('Please select a batch');return;}
   const b=batches.find(x=>x.name===batch);
   const isAXS=b?.type==='axs'||batch.toLowerCase().startsWith('axs');
-  const data={name,preferredName:document.getElementById('an_pname').value.trim(),phone:document.getElementById('an_phone').value.trim(),nric:document.getElementById('an_nric').value.trim(),gender:document.getElementById('an_gender').value,birthYear:parseInt(document.getElementById('an_by').value)||null,batch,leadType:isAXS?'axs':'ekko',status:document.getElementById('an_status').value||'New',calledCount:0,pickedUp:false,contacted:false,meetingSet:false,met:false,purchased:false,referral:false,followUpDate:'',followUpHistory:[],extraNotes:document.getElementById('an_notes').value.trim(),policies:'',premiumPerYear:'',savings:'',priorities:''};
+  const btype=b?.type||(isAXS?'axs':'ekko');
+  const data={name,preferredName:document.getElementById('an_pname').value.trim(),phone:document.getElementById('an_phone').value.trim(),nric:document.getElementById('an_nric').value.trim(),gender:document.getElementById('an_gender').value,birthYear:parseInt(document.getElementById('an_by').value)||null,batch,leadType:btype,status:document.getElementById('an_status').value||'New',calledCount:0,pickedUp:false,contacted:false,meetingSet:false,met:false,purchased:false,referral:false,followUpDate:'',followUpHistory:[],extraNotes:document.getElementById('an_notes').value.trim(),policies:'',premiumPerYear:'',savings:'',priorities:''};
   if(isAXS){data.savings=document.getElementById('an_savings')?.value||'';data.priorities=document.getElementById('an_priorities')?.value.trim()||'';}
   else{data.policies=document.getElementById('an_policies')?.value.trim()||'';data.premiumPerYear=document.getElementById('an_premium')?.value.trim()||'';}
   document.getElementById('addModal')?.remove();
@@ -2530,9 +2575,10 @@ function parseCSV(text){
 function mapCSVRow(headers,row,batch,rowIndex=0){
   const b=batches.find(x=>x.name===batch);
   const isAXS=b?.type==='axs'||batch.toLowerCase().startsWith('axs');
+  const btype=b?.type||(isAXS?'axs':'ekko');
   const get=(...names)=>{for(const n of names){const idx=headers.findIndex(h=>(h||'').toLowerCase().trim()===(n||'').toLowerCase().trim());if(idx>=0&&idx<row.length)return(row[idx]||'').trim();}return'';};
   const bool=v=>['y','yes','true','1'].includes((v||'').toLowerCase().trim());
-  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),birthYear:parseInt(get('year of birth','birth year','dob year','yob','year'))||null,batch,leadType:isAXS?'axs':'ekko',status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',priorities:isAXS?get('priorities'):'',extraNotes:get('extra notes','notes','remarks','comments'),followUpDate:'',followUpHistory:[],rowIndex};
+  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),birthYear:parseInt(get('year of birth','birth year','dob year','yob','year'))||null,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',priorities:isAXS?get('priorities'):'',extraNotes:get('extra notes','notes','remarks','comments'),followUpDate:'',followUpHistory:[],rowIndex};
 }
 window._confirmImport=async()=>{
   if(!pendingImport.length)return;

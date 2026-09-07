@@ -727,8 +727,8 @@ window._exportCSV=()=>{
   const rows=activeBatch?prospects.filter(p=>p.batch===activeBatch):prospects;
   if(!rows.length){toast('No prospects to export');return;}
   const esc2=v=>`"${(v==null?'':String(v)).replace(/"/g,'""')}"`;
-  const headers=['Name','Preferred Name','Gender','Birth Year','Phone','NRIC','Batch','Status','Called Count','Last Called','Follow-up Date','Appointment Date','Picked Up','Contacted','Meeting Set','Met','Purchased','Referral','Notes'];
-  const csv=[headers.join(','),...rows.map(p=>[p.name,p.preferredName,p.gender,p.birthYear,p.phone,p.nric,p.batch,p.status,p.calledCount||0,p.lastCalledDate||'',p.followUpDate||'',p.appointmentDate||'',p.pickedUp?1:0,p.contacted?1:0,p.meetingSet?1:0,p.met?1:0,p.purchased?1:0,p.referral?1:0,(p.extraNotes||'').replace(/\n/g,' ')].map(esc2).join(','))].join('\n');
+  const headers=['Name','Preferred Name','Gender','Date of Birth','Phone','NRIC','Batch','Status','Called Count','Last Called','Follow-up Date','Appointment Date','Picked Up','Contacted','Meeting Set','Met','Purchased','Referral','Notes'];
+  const csv=[headers.join(','),...rows.map(p=>[p.name,p.preferredName,p.gender,p.dob||p.birthYear||'',p.phone,p.nric,p.batch,p.status,p.calledCount||0,p.lastCalledDate||'',p.followUpDate||'',p.appointmentDate||'',p.pickedUp?1:0,p.contacted?1:0,p.meetingSet?1:0,p.met?1:0,p.purchased?1:0,p.referral?1:0,(p.extraNotes||'').replace(/\n/g,' ')].map(esc2).join(','))].join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=`colddb_${(activeBatch||'all').replace(/\s/g,'_')}_${today()}.csv`;a.click();
@@ -1316,12 +1316,43 @@ async function convertToClient(p){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 let toastTimer=null;
 function toast(msg,dur=3500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),dur);}
-function calcAge(by){return by?new Date().getFullYear()-by:'—';}
+function parseDOB(str){
+  if(!str)return null;
+  str=str.trim();
+  const mo={'jan':1,'feb':2,'mar':3,'apr':4,'may':5,'jun':6,'jul':7,'aug':8,'sep':9,'oct':10,'nov':11,'dec':12};
+  let m;
+  m=str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if(m){const[,d,mn,y]=[...m].map(Number);if(d>=1&&d<=31&&mn>=1&&mn<=12&&y>=1900&&y<=2020)return{d,m:mn,y,fmt:`${String(d).padStart(2,'0')}/${String(mn).padStart(2,'0')}/${y}`};}
+  m=str.match(/^(\d{1,2})[\s\-]([a-zA-Z]{3,9})[\s\-,]*(\d{4})$/);
+  if(m){const mn=mo[m[2].toLowerCase().slice(0,3)];if(mn){const d=Number(m[1]),y=Number(m[3]);if(d>=1&&d<=31&&y>=1900&&y<=2020)return{d,m:mn,y,fmt:`${String(d).padStart(2,'0')}/${String(mn).padStart(2,'0')}/${y}`};}}
+  m=str.match(/^([a-zA-Z]{3,9})[\s\-](\d{1,2})[,\s]+(\d{4})$/);
+  if(m){const mn=mo[m[1].toLowerCase().slice(0,3)];if(mn){const d=Number(m[2]),y=Number(m[3]);if(d>=1&&d<=31&&y>=1900&&y<=2020)return{d,m:mn,y,fmt:`${String(d).padStart(2,'0')}/${String(mn).padStart(2,'0')}/${y}`};}}
+  return null;
+}
+function calcAge(dob){
+  if(!dob)return'—';
+  if(typeof dob==='string'&&dob.includes('/')){
+    const pts=dob.split('/');
+    if(pts.length===3){const d=+pts[0],mo=+pts[1]-1,y=+pts[2];const n=new Date();let a=n.getFullYear()-y;if(n.getMonth()<mo||(n.getMonth()===mo&&n.getDate()<d))a--;return a>=0?a:'—';}
+  }
+  const y=parseInt(dob,10);return y?new Date().getFullYear()-y:'—';
+}
 function today(){return new Date().toISOString().slice(0,10);}
 function daysSince(d){if(!d)return 'Never';if(d===today())return 'Today';const n=Math.round((new Date(today())-new Date(d))/86400000);return n===1?'Yesterday':`${n}d ago`;}
 function fmtShortDate(d){if(!d)return'—';const[,m,day]=d.split('-');const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${parseInt(day,10)} ${mo[parseInt(m,10)-1]}`;}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
 function needsFollowUp(p){return p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';}
+window._dobHint=(inputId,hintId)=>{
+  const raw=document.getElementById(inputId)?.value.trim()||'';
+  const hint=document.getElementById(hintId);if(!hint)return;
+  if(!raw){hint.textContent='';return;}
+  const parsed=parseDOB(raw);
+  if(parsed){
+    document.getElementById(inputId).value=parsed.fmt;
+    hint.textContent=`→ ${parsed.fmt} · Age ${calcAge(parsed.fmt)}`;
+    hint.style.color='#4ade80';
+  }else{hint.textContent='Format not recognised';hint.style.color='#f87171';}
+};
 function getSal(gender){const v=(gender||'').trim().toUpperCase().charAt(0);return v==='M'?'Mr':v==='F'?'Ms':'';}
 
 // ── Google Tasks ──
@@ -2264,7 +2295,7 @@ function renderList(){
           <span class="wa-quick appt" onclick="event.stopPropagation();window._apptModal('${p.id}')" title="Set appointment">📅 Appt</span>
         </div>`:''}
       </td>
-      <td style="color:var(--muted)">${calcAge(p.birthYear)}</td>
+      <td style="color:var(--muted)">${calcAge(p.dob||p.birthYear)}</td>
       <td><span class="batch-tag ${batchAccentClass(p.leadType)}">${esc(p.batch||'—')}</span></td>
       <td style="color:${gColor};font-weight:700;font-size:11px">${gNorm||'—'}</td>
       <td style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(policyText)}">${esc(policyText)}</td>
@@ -2428,13 +2459,13 @@ function renderDetailContent(p){
     <div class="d-meta">
       <span class="d-meta-chip">${esc(p.batch||'—')}</span>
       <span class="d-meta-chip" style="color:${templateColor(p.leadType||'ekko')}">${typeLabel(p.leadType||'ekko')}</span>
-      <span class="d-meta-chip">Age ${calcAge(p.birthYear)}</span>
+      <span class="d-meta-chip">Age ${calcAge(p.dob||p.birthYear)}</span>
     </div>
     <div class="d-section">
       <div class="d-section-title">Identity</div>
       <div class="field-row"><div class="fg"><label>Name</label><input id="d_name" value="${esc(p.name||'')}"/></div><div class="fg"><label>Preferred Name</label><input id="d_pname" value="${esc(p.preferredName||'')}"/></div></div>
       <div class="field-row"><div class="fg"><label>NRIC</label><input id="d_nric" value="${esc(p.nric||'')}"/></div><div class="fg"><label>Gender</label><select id="d_gender"><option value="" ${!p.gender?'selected':''}>—</option><option value="M" ${p.gender==='M'?'selected':''}>Male</option><option value="F" ${p.gender==='F'?'selected':''}>Female</option></select></div></div>
-      <div class="field-row"><div class="fg"><label>Birth Year</label><input id="d_by" type="number" min="1920" max="2010" value="${p.birthYear||''}"/></div><div class="fg"><label>Phone</label><input id="d_phone" value="${esc(p.phone||'')}"/></div></div>
+      <div class="field-row"><div class="fg"><label>Date of Birth <span id="d_dob_hint" style="font-size:10px;color:var(--dim);font-weight:normal;margin-left:4px"></span></label><input id="d_dob" type="text" placeholder="DD/MM/YYYY or 24 Nov 1981" value="${p.dob||''}" oninput="window._dobHint('d_dob','d_dob_hint')"/></div><div class="fg"><label>Phone</label><input id="d_phone" value="${esc(p.phone||'')}"/></div></div>
     </div>
     <div class="d-section">
       <div class="d-section-title">Status &amp; Tracking</div>
@@ -2503,7 +2534,8 @@ window._saveDetail=async(id,type)=>{
     const note=p.appointmentDate?`Appointment changed: ${p.appointmentDate} → ${newAppt||'cleared'}`:`Appointment set for ${newAppt}`;
     hist.push({date:today(),note,type:'appt',updatedAt:new Date().toISOString()});
   }
-  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,birthYear:parseInt(document.getElementById('d_by').value)||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,referredBy:document.getElementById('d_referredby')?.value.trim()||'',followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
+  const _dobRaw=document.getElementById('d_dob').value.trim();const _dobP=parseDOB(_dobRaw);if(_dobRaw&&!_dobP){toast('Date of birth format not recognised — use DD/MM/YYYY');return;}
+  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,dob:_dobP?.fmt||null,birthYear:_dobP?.y||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,referredBy:document.getElementById('d_referredby')?.value.trim()||'',followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
   if(type==='axs'){upd.savings=document.getElementById('d_savings').value;upd.priorities=document.getElementById('d_priorities').value.trim();}
   else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
   const fuChanged=newFU&&newFU!==(p.followUpDate||'');
@@ -2547,7 +2579,7 @@ function openAddModal(prefill={}){
   modal.innerHTML=`<div class="modal"><h2>Add New Prospect</h2>
     <div class="field-row"><div class="fg"><label>Name *</label><input id="an_name" placeholder="Full name" value="${esc(prefill.name||'')}"/></div><div class="fg"><label>Preferred Name</label><input id="an_pname" value="${esc(prefill.preferredName||'')}"/></div></div>
     <div class="field-row"><div class="fg"><label>Phone</label><input id="an_phone" placeholder="9XXXXXXX" value="${esc(prefill.phone||'')}"/></div><div class="fg"><label>NRIC</label><input id="an_nric" value="${esc(prefill.nric||'')}"/></div></div>
-    <div class="field-row"><div class="fg"><label>Gender</label><select id="an_gender"><option value="">—</option><option value="M" ${prefill.gender==='M'?'selected':''}>Male</option><option value="F" ${prefill.gender==='F'?'selected':''}>Female</option></select></div><div class="fg"><label>Birth Year</label><input id="an_by" type="number" placeholder="1990" value="${prefill.birthYear||''}"/></div></div>
+    <div class="field-row"><div class="fg"><label>Gender</label><select id="an_gender"><option value="">—</option><option value="M" ${prefill.gender==='M'?'selected':''}>Male</option><option value="F" ${prefill.gender==='F'?'selected':''}>Female</option></select></div><div class="fg"><label>Date of Birth <span id="an_dob_hint" style="font-size:10px;color:var(--dim);font-weight:normal;margin-left:4px"></span></label><input id="an_dob" type="text" placeholder="DD/MM/YYYY or 24 Nov 1981" value="${prefill.dob||''}" oninput="window._dobHint('an_dob','an_dob_hint')"/></div></div>
     <div class="field-row"><div class="fg"><label>Batch *</label><select id="an_batch" onchange="window._anBatchChange()"><option value="">Select…</option>${batchOpts}</select></div><div class="fg"><label>Status</label><select id="an_status">${STATUSES.map(s=>`<option value="${s}" ${(prefill.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
     <div id="an_extra"></div>
     <div class="field-row single" style="margin-top:4px"><div class="fg"><label>Extra Notes</label><textarea id="an_notes" rows="2">${esc(prefill.extraNotes||'')}</textarea></div></div>
@@ -2577,7 +2609,8 @@ window._submitAdd=async()=>{
   const b=batches.find(x=>x.name===batch);
   const isAXS=b?.type==='axs'||batch.toLowerCase().startsWith('axs');
   const btype=b?.type||(isAXS?'axs':'ekko');
-  const data={name,preferredName:document.getElementById('an_pname').value.trim(),phone:document.getElementById('an_phone').value.trim(),nric:document.getElementById('an_nric').value.trim(),gender:document.getElementById('an_gender').value,birthYear:parseInt(document.getElementById('an_by').value)||null,batch,leadType:btype,status:document.getElementById('an_status').value||'New',calledCount:0,pickedUp:false,contacted:false,meetingSet:false,met:false,purchased:false,referral:false,followUpDate:'',followUpHistory:[],extraNotes:document.getElementById('an_notes').value.trim(),policies:'',premiumPerYear:'',savings:'',priorities:''};
+  const _anDobRaw=document.getElementById('an_dob').value.trim();const _anDobP=parseDOB(_anDobRaw);if(_anDobRaw&&!_anDobP){toast('Date of birth format not recognised — use DD/MM/YYYY');return;}
+  const data={name,preferredName:document.getElementById('an_pname').value.trim(),phone:document.getElementById('an_phone').value.trim(),nric:document.getElementById('an_nric').value.trim(),gender:document.getElementById('an_gender').value,dob:_anDobP?.fmt||null,birthYear:_anDobP?.y||null,batch,leadType:btype,status:document.getElementById('an_status').value||'New',calledCount:0,pickedUp:false,contacted:false,meetingSet:false,met:false,purchased:false,referral:false,followUpDate:'',followUpHistory:[],extraNotes:document.getElementById('an_notes').value.trim(),policies:'',premiumPerYear:'',savings:'',priorities:''};
   if(isAXS){data.savings=document.getElementById('an_savings')?.value||'';data.priorities=document.getElementById('an_priorities')?.value.trim()||'';}
   else{data.policies=document.getElementById('an_policies')?.value.trim()||'';data.premiumPerYear=document.getElementById('an_premium')?.value.trim()||'';}
   document.getElementById('addModal')?.remove();

@@ -2356,10 +2356,9 @@ function renderList(){
       ?`<span class="appt-date" style="color:#c084fc;white-space:nowrap">${fmtShortDate(p.appointmentDate)}</span>${apptTimeStr}`
       :`<span class="appt-date" style="color:var(--muted)">—</span>`;
     return `<tr class="${cls}" data-id="${p.id}" style="animation-delay:${Math.min(i*.025,.4)}s"
-        onclick="window._select('${p.id}')"
-        ${hasNotes?`onmouseenter="window._showTip(event,'${esc(userNotesPreview(p).replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
+        onclick="window._select('${p.id}')">
       <td>
-        <div class="p-name">${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
+        <div class="p-name" ${hasNotes?`onmouseenter="event.stopPropagation();window._showTip(event,'${esc(userNotesPreview(p).replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
         ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
       </td>

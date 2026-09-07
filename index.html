@@ -2414,7 +2414,11 @@ window._quickStatus=(id,event)=>{
 };
 
 // ── Detail panel ──
-function openDetail(p){document.getElementById('detailPane').classList.add('open');renderDetailContent(p);}
+function openDetail(p){
+  document.getElementById('detailPane').classList.add('open');
+  renderDetailContent(p);
+  document.getElementById('detailInner').scrollTop=0;
+}
 function closeDetail(){
   document.getElementById('detailPane').classList.remove('open');
   if(selectedId){
@@ -2519,6 +2523,11 @@ function renderDetailContent(p){
       <button class="btn btn-convert" onclick="window._convert('${p.id}')">Convert to Client</button>
       <button class="btn btn-danger" onclick="window._delete('${p.id}')">Delete</button>
     </div>`;
+  document.getElementById('detailInner').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'){
+      e.preventDefault();window._saveDetail(p.id,isAXS?'axs':'ekko');
+    }
+  });
 }
 
 window._saveDetail=async(id,type)=>{

@@ -2429,6 +2429,16 @@ function closeDetail(){
 }
 window._closeDetail=closeDetail;
 
+// Single permanent Enter-to-save listener — reads selectedId so it never stacks
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.shiftKey)return;
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON')return;
+  if(!selectedId||!document.getElementById('detailPane')?.classList.contains('open'))return;
+  const _p=prospects.find(x=>x.id===selectedId);if(!_p)return;
+  e.preventDefault();
+  window._saveDetail(selectedId,_p.leadType==='axs'?'axs':'ekko');
+});
+
 function apptClass(dateStr){
   if(!dateStr)return null;
   const days=Math.ceil((new Date(dateStr)-new Date())/86400000);
@@ -2523,11 +2533,6 @@ function renderDetailContent(p){
       <button class="btn btn-convert" onclick="window._convert('${p.id}')">Convert to Client</button>
       <button class="btn btn-danger" onclick="window._delete('${p.id}')">Delete</button>
     </div>`;
-  document.getElementById('detailInner').addEventListener('keydown',e=>{
-    if(e.key==='Enter'&&!e.shiftKey&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'){
-      e.preventDefault();window._saveDetail(p.id,isAXS?'axs':'ekko');
-    }
-  });
 }
 
 window._saveDetail=async(id,type)=>{

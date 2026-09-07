@@ -2754,6 +2754,21 @@ function parseCSV(text){
   for(let i=0;i<text.length;i++){const c=text[i];if(inQ){if(c==='"'&&text[i+1]==='"'){field+='"';i++;}else if(c==='"'){inQ=false;}else field+=c;}else{if(c==='"'){inQ=true;}else if(c===','){row.push(field);field='';}else if(c==='\n'){row.push(field);field='';rows.push(row);row=[];}else field+=c;}}
   if(field||row.length){row.push(field);rows.push(row);}return rows;
 }
+// CSV "Date of Birth" often comes as "31-Jul-85" (2-digit year) — parseDOB
+// requires a 4-digit year, so expand it first, then reuse parseDOB.
+function parseCSVDOB(str){
+  if(!str)return null;
+  str=str.trim();
+  const m=str.match(/^(\d{1,2})[\s\-\/]([a-zA-Z]{3,9})[\s\-\/,]*(\d{2})$/);
+  if(m){
+    const yy=parseInt(m[3],10);
+    // These are adult sales prospects, so bias toward 19XX (the common case) —
+    // only fall back to 20XX when 19XX would make them implausibly old (100+).
+    const yyyy=(new Date().getFullYear()-(1900+yy))>100?2000+yy:1900+yy;
+    return parseDOB(`${m[1]}-${m[2]}-${yyyy}`);
+  }
+  return parseDOB(str);
+}
 function mapCSVRow(headers,row,batch,rowIndex=0){
   const b=batches.find(x=>x.name===batch);
   const isAXS=b?.type==='axs'||batch.toLowerCase().startsWith('axs');
@@ -2770,7 +2785,9 @@ function mapCSVRow(headers,row,batch,rowIndex=0){
       if(match)finPriorities[match.key]=i+1;
     });
   }
-  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),birthYear:parseInt(get('year of birth','birth year','dob year','yob','year'))||null,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',finPriorities,extraNotes:get('extra notes','notes','remarks','comments'),followUpDate:'',followUpHistory:[],rowIndex};
+  const dobP=parseCSVDOB(get('date of birth','dob','d.o.b','d.o.b.','birthdate','birth date'));
+  const birthYear=dobP?.y||parseInt(get('year of birth','birth year','dob year','yob','year'))||null;
+  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),dob:dobP?.fmt||null,birthYear,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',finPriorities,extraNotes:get('extra notes','notes','remarks','comments'),followUpDate:'',followUpHistory:[],rowIndex};
 }
 function normPhone(s){return String(s||'').replace(/\D/g,'');}
 // Re-importing the same batch should update existing leads (matched by phone),
@@ -2792,6 +2809,9 @@ window._confirmImport=async()=>{
           const upd={...data};
           delete upd.rowIndex;
           IMPORT_PRESERVE.forEach(f=>delete upd[f]);
+          // Don't blank out an already-known birthdate just because this
+          // particular re-import's CSV didn't have a parseable one for this row.
+          if(!upd.dob&&!upd.birthYear){delete upd.dob;delete upd.birthYear;}
           await updateDoc(doc(db,'prospects',existing.id),{...upd,updatedAt:serverTimestamp()});
           const idx=prospects.findIndex(p=>p.id===existing.id);
           if(idx>=0)prospects[idx]={...prospects[idx],...upd};

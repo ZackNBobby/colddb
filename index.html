@@ -1896,7 +1896,7 @@ function getFunnelCounts(arr){
   const total=arr.length;
   const called=arr.filter(p=>p.pickedUp||(p.calledCount||0)>0||['Called','Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
   const contacted=arr.filter(p=>p.contacted||['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
-  const apptSet=arr.filter(p=>p.appointmentDate||p.met||['Met','Converted'].includes(p.status)).length;
+  const apptSet=arr.filter(p=>p.meetingSet||p.appointmentDate||p.met||['Meeting Set','Met','Converted'].includes(p.status)).length;
   const met=arr.filter(p=>p.met||['Met','Converted'].includes(p.status)).length;
   const converted=arr.filter(p=>p.purchased||p.status==='Converted').length;
   const cold=arr.filter(p=>p.status==='Cold').length;
@@ -2339,7 +2339,8 @@ window._select=id=>{
   if(p)openDetail(p);
 };
 window._flag=async(id,field,val)=>{
-  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const idx=prospects.findIndex(x=>x.id===id);if(idx<0)return;
+  const before={...prospects[idx]};
   const upd={[field]:val};
   // Pipeline cascade: ticking a stage auto-ticks all earlier stages;
   // un-ticking a stage auto-unticks all later stages.
@@ -2348,33 +2349,40 @@ window._flag=async(id,field,val)=>{
     if(val){for(let i=0;i<pIdx;i++)upd[PIPELINE[i]]=true;}
     else{for(let i=pIdx+1;i<PIPELINE.length;i++)upd[PIPELINE[i]]=false;}
   }
-  // Save to Firestore + update local data without triggering renderList()
+  // Apply locally + reflect in the UI immediately (optimistic) — don't wait on
+  // the Firestore round-trip before the checkbox/stats visibly update.
+  prospects[idx]={...prospects[idx],...upd};
+  const applyToDom=()=>{
+    const p2=prospects.find(x=>x.id===id);
+    const row=document.querySelector(`tr[data-id="${id}"]`);
+    if(row){
+      const tds=row.querySelectorAll('td');
+      const setChk=(tdIdx,f)=>{const inp=tds[tdIdx]?.querySelector('.tgl input');if(inp)inp.checked=!!p2[f];};
+      setChk(9,'pickedUp');setChk(10,'contacted');setChk(11,'meetingSet');setChk(12,'met');setChk(13,'purchased');setChk(14,'referral');
+      // Re-render follow-up cell if met/purchased changed (affects the pulse dot)
+      if(pIdx>=0||field==='met'||field==='purchased'){
+        const needsFU=p2.status==='Met'&&!p2.purchased;
+        const fuc=fuClass(p2.followUpDate);
+        const fuCell=tds[7];
+        if(fuCell)fuCell.innerHTML=needsFU
+          ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p2.followUpDate||'Set date!'}</span></span>`
+          :`<span class="fu-date ${fuc}">${p2.followUpDate||'—'}</span>`;
+      }
+    }
+    // Update funnel strip + status chips instantly
+    renderStats();renderFunnelBar();
+    // Refresh detail panel if open on this prospect
+    if(selectedId===id)renderDetailContent(p2);
+  };
+  applyToDom();
+  // Persist in the background; roll back + re-render if it fails.
   try{
     await updateDoc(doc(db,'prospects',id),{...upd,updatedAt:serverTimestamp()});
-    const idx=prospects.findIndex(x=>x.id===id);
-    if(idx>=0)prospects[idx]={...prospects[idx],...upd};
-  }catch(e){toast('Error: '+e.message);return;}
-  const p2=prospects.find(x=>x.id===id);
-  // Targeted DOM patch — only touch the cells that changed
-  const row=document.querySelector(`tr[data-id="${id}"]`);
-  if(row){
-    const tds=row.querySelectorAll('td');
-    const setChk=(tdIdx,f)=>{const inp=tds[tdIdx]?.querySelector('.tgl input');if(inp)inp.checked=!!p2[f];};
-    setChk(9,'pickedUp');setChk(10,'contacted');setChk(11,'meetingSet');setChk(12,'met');setChk(13,'purchased');setChk(14,'referral');
-    // Re-render follow-up cell if met/purchased changed (affects the pulse dot)
-    if(pIdx>=0||field==='met'||field==='purchased'){
-      const needsFU=p2.status==='Met'&&!p2.purchased;
-      const fuc=fuClass(p2.followUpDate);
-      const fuCell=tds[7];
-      if(fuCell)fuCell.innerHTML=needsFU
-        ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p2.followUpDate||'Set date!'}</span></span>`
-        :`<span class="fu-date ${fuc}">${p2.followUpDate||'—'}</span>`;
-    }
+  }catch(e){
+    prospects[idx]=before;
+    applyToDom();
+    toast('Error saving: '+e.message);
   }
-  // Update funnel strip + status chips instantly
-  renderStats();renderFunnelBar();
-  // Refresh detail panel if open on this prospect
-  if(selectedId===id)renderDetailContent(p2);
 };
 window._addCall=async id=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;

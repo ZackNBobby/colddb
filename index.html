@@ -2601,6 +2601,10 @@ function renderDetailContent(p){
         <button class="note-add-btn" onclick="window._addNote('${p.id}')">+ Note</button>
       </div>
       <div class="fu-history" style="margin-top:10px">${histHtml}</div>
+      ${(p.extraNotes||'').trim()?`<details style="margin-top:10px">
+        <summary style="cursor:pointer;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em">📥 Imported text (from CSV, not counted as a Note)</summary>
+        <div style="margin-top:6px;padding:8px 10px;background:rgba(10,20,36,.5);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);white-space:pre-wrap">${esc(p.extraNotes)}</div>
+      </details>`:''}
     </div>
     ${isAXS?`<div class="d-section"><div class="d-section-title">AXS Profile</div>
       <div class="field-row single"><div class="fg"><label>Savings Bracket</label><select id="d_savings"><option value="" ${!p.savings?'selected':''}>—</option>${SAVINGS_OPTS.map(s=>`<option value="${s}" ${p.savings===s?'selected':''}>${s}</option>`).join('')}</select></div></div>

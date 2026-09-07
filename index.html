@@ -390,18 +390,24 @@
     .fg label{display:block;font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
     .fg input,.fg select,.fg textarea{width:100%;background:rgba(10,20,36,.8);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
     .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold-border);}
+    #d_notes{font-size:13px;line-height:1.6;}
     .fg textarea{resize:vertical;min-height:56px;}
     .fg select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a8d'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;}
     .check-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px;padding:9px 11px;background:rgba(10,20,36,.5);border-radius:8px;border:1px solid var(--border);}
     .check-label{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;user-select:none;color:var(--muted);}
     .check-label input[type=checkbox]{width:14px;height:14px;accent-color:var(--gold);cursor:pointer;}
-    .fu-history{margin-top:7px;padding:9px 11px;background:rgba(10,20,36,.6);border:1px solid var(--border);border-radius:8px;max-height:130px;overflow-y:auto;}
-    .fu-entry{font-size:11px;color:var(--dim);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:6px;align-items:baseline;}
+    .fu-history{margin-top:7px;padding:9px 11px;background:rgba(10,20,36,.6);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;}
+    .fu-entry{font-size:12px;color:var(--dim);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:6px;align-items:baseline;}
     .fu-entry:last-child{border-bottom:none;}
-    .fu-entry-date{color:var(--muted);font-weight:700;white-space:nowrap;font-size:10px;}
-    .fu-entry-icon{font-size:10px;flex-shrink:0;}
+    .fu-entry-date{color:var(--muted);font-weight:700;white-space:nowrap;font-size:11px;}
+    .fu-entry-icon{font-size:11px;flex-shrink:0;}
+    .fu-entry-actions{display:none;gap:2px;flex-shrink:0;}
+    .fu-entry:hover .fu-entry-actions{display:flex;}
+    .fu-entry-action{cursor:pointer;font-size:11px;color:var(--dim);padding:2px 5px;border-radius:4px;transition:all .12s;}
+    .fu-entry-action:hover{color:var(--text);background:rgba(255,255,255,.08);}
+    .fu-entry-action.del:hover{color:#f87171;background:rgba(239,68,68,.12);}
     .note-add-row{display:flex;gap:6px;margin-top:8px;align-items:flex-end;}
-    .note-add-input{flex:1;background:rgba(10,20,36,.8);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;resize:vertical;min-height:64px;line-height:1.5;}
+    .note-add-input{flex:1;background:rgba(10,20,36,.8);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;resize:vertical;min-height:64px;line-height:1.6;}
     .note-add-input:focus{border-color:var(--gold-border);}
     .note-add-btn{background:rgba(240,165,0,.1);border:1px solid var(--gold-border);border-radius:8px;padding:6px 10px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'Inter',sans-serif;}
     .note-add-btn:hover{background:rgba(240,165,0,.2);}
@@ -605,6 +611,13 @@
           <option value="">All</option>
           <option value="yes">Purchased ✓</option>
           <option value="no">Not Purchased</option>
+        </select>
+      </div>
+      <div class="filter-wrap">
+        <select class="filter-select" id="fNotes" title="Find prospects you've met and written notes on, across every batch — switch to All Prospects to search everywhere">
+          <option value="">All</option>
+          <option value="yes">📝 With Notes</option>
+          <option value="no">No Notes</option>
         </select>
       </div>
       <input class="filter-input" id="fPolicies" type="text" placeholder="🔖 Policy…" style="width:130px;display:none"/>
@@ -1904,6 +1917,7 @@ function showProspects(batchName=''){
   document.getElementById('fStatus').value='';
   document.getElementById('fGender').value='';
   document.getElementById('fPurchased').value='';
+  document.getElementById('fNotes').value='';
   const crumb=document.getElementById('topbarCrumb');
   crumb.innerHTML=`<button class="topbar-back" onclick="window._goHome()">← Dashboard</button>
     <span style="color:var(--dim);font-size:11px">/</span>
@@ -2178,6 +2192,7 @@ function getFiltered(){
   const status=document.getElementById('fStatus')?.value||'';
   const gender=document.getElementById('fGender')?.value||'';
   const purch=document.getElementById('fPurchased')?.value||'';
+  const notesQ=document.getElementById('fNotes')?.value||'';
   const policyQ=document.getElementById('fPolicies')?.value.toLowerCase().trim()||'';
   return prospects.filter(p=>{
     if(activeBatch&&p.batch!==activeBatch)return false;
@@ -2199,6 +2214,7 @@ function getFiltered(){
     if(gender&&p.gender!==gender)return false;
     if(purch==='yes'&&!p.purchased)return false;
     if(purch==='no'&&p.purchased)return false;
+    if(notesQ){const hasNotes=!!(p.extraNotes||'').trim();if(notesQ==='yes'&&!hasNotes)return false;if(notesQ==='no'&&hasNotes)return false;}
     if(policyQ&&!(p.policies||'').toLowerCase().includes(policyQ))return false;
     return true;
   });
@@ -2326,7 +2342,7 @@ function renderList(){
         onclick="window._select('${p.id}')"
         ${hasNotes?`onmouseenter="window._showTip(event,'${esc(p.extraNotes?.replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
       <td>
-        <div class="p-name">${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${esc(p.name)}</div>
+        <div class="p-name">${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
         ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
       </td>
@@ -2509,9 +2525,14 @@ function apptLabel(dateStr){
 function renderDetailContent(p){
   const isAXS=p.leadType==='axs';
   const ICONS={followup:'📅',note:'📝',appt:'📆',status:'🔄'};
-  const histHtml=(p.followUpHistory||[]).slice().reverse().map(h=>{
+  const rawHist=p.followUpHistory||[];
+  const histHtml=rawHist.map((h,i)=>({h,i})).reverse().map(({h,i})=>{
     const icon=h.type==='appt'?ICONS.appt:h.type==='note'?ICONS.note:h.type==='status'?ICONS.status:ICONS.followup;
-    return`<div class="fu-entry"><span class="fu-entry-icon">${icon}</span><span class="fu-entry-date">${esc(h.date)}</span><span style="flex:1">${esc(h.note)}</span></div>`;
+    const actions=h.type==='note'?`<span class="fu-entry-actions">
+      <span class="fu-entry-action" onclick="window._editNoteEntry('${p.id}',${i})" title="Edit">✎</span>
+      <span class="fu-entry-action del" onclick="window._deleteNoteEntry('${p.id}',${i})" title="Delete">✕</span>
+    </span>`:'';
+    return`<div class="fu-entry"><span class="fu-entry-icon">${icon}</span><span class="fu-entry-date">${esc(h.date)}</span><span style="flex:1">${esc(h.note)}</span>${actions}</div>`;
   }).join('')||`<div style="color:var(--dim);font-size:11px;padding:3px 0;font-style:italic">No history yet — changes to follow-up date and manual notes appear here.</div>`;
   const ac=apptClass(p.appointmentDate);
   const al=apptLabel(p.appointmentDate);
@@ -2631,6 +2652,26 @@ window._addNote=async(id)=>{
   const note=(inp?.value||'').trim();if(!note){inp?.focus();return;}
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const hist=[...(p.followUpHistory||[]),{date:today(),note,type:'note',updatedAt:new Date().toISOString()}];
+  await updateProspect(id,{followUpHistory:hist});
+  const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
+};
+window._editNoteEntry=async(id,idx)=>{
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const hist=[...(p.followUpHistory||[])];
+  const entry=hist[idx];if(!entry)return;
+  const updated=prompt('Edit note:',entry.note);
+  if(updated===null)return;
+  const trimmed=updated.trim();
+  if(!trimmed){toast('Note can\'t be empty — use ✕ to delete it instead');return;}
+  hist[idx]={...entry,note:trimmed};
+  await updateProspect(id,{followUpHistory:hist});
+  const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
+};
+window._deleteNoteEntry=async(id,idx)=>{
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  if(!confirm('Delete this note?'))return;
+  const hist=[...(p.followUpHistory||[])];
+  hist.splice(idx,1);
   await updateProspect(id,{followUpHistory:hist});
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
 };
@@ -2924,7 +2965,7 @@ window._confirmDedupe=async()=>{
 };
 
 // ── Filters ──
-['fSearch','fStatus','fGender','fPurchased','fPolicies'].forEach(id=>{
+['fSearch','fStatus','fGender','fPurchased','fNotes','fPolicies'].forEach(id=>{
   const el=document.getElementById(id);if(!el)return;
   el.addEventListener('input',()=>{if(currentView==='prospects')renderAll();});
   el.addEventListener('change',()=>{if(currentView==='prospects')renderAll();});

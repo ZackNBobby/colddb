@@ -541,6 +541,7 @@
     <div class="topbar-crumb" id="topbarCrumb"></div>
     <div class="topbar-right">
       <button class="btn btn-secondary" id="btnImport" style="display:none">↑ Import</button>
+      <button class="btn btn-ghost" id="btnDedupe" style="display:none" title="Find and merge duplicate leads (same phone number)">🧹 Dedupe</button>
       <button class="btn btn-ghost" id="btnExport" style="display:none" title="Export current view as CSV">↓ Export</button>
       <button class="btn btn-primary" id="btnAdd">+ Add</button>
       <button class="btn btn-primary" id="btnAddClosing" style="display:none" onclick="window._addClosingModal()">+ Log Sale</button>
@@ -870,6 +871,7 @@ function showSales(){
   document.getElementById('prospectView').style.display='none';
   document.getElementById('salesView').style.display='block';
   document.getElementById('btnImport').style.display='none';
+  document.getElementById('btnDedupe').style.display='none';
   document.getElementById('btnExport').style.display='none';
   document.getElementById('btnAdd').style.display='none';
   document.getElementById('btnAddClosing').style.display='';
@@ -1863,6 +1865,7 @@ function showDashboard(){
   document.getElementById('prospectView').style.display='none';
   document.getElementById('salesView').style.display='none';
   document.getElementById('btnImport').style.display='none';
+  document.getElementById('btnDedupe').style.display='none';
   document.getElementById('btnExport').style.display='none';
   document.getElementById('btnAdd').style.display='';
   document.getElementById('btnAddClosing').style.display='none';
@@ -1885,6 +1888,7 @@ function showProspects(batchName=''){
   document.getElementById('salesView').style.display='none';
   document.getElementById('prospectView').style.display='flex';
   document.getElementById('btnImport').style.display='';
+  document.getElementById('btnDedupe').style.display='';
   document.getElementById('btnExport').style.display='';
   document.getElementById('btnAdd').style.display='';
   document.getElementById('btnAddClosing').style.display='none';
@@ -2758,13 +2762,13 @@ function mapCSVRow(headers,row,batch,rowIndex=0){
   const bool=v=>['y','yes','true','1'].includes((v||'').toLowerCase().trim());
   const finPriorities={};
   if(isAXS){
-    const FIN_COLS={
-      savings:['savings','savings priority'],
-      education:["child's education","childs education","child education","education","children's education","children education"],
-      investRetirement:['investments & retirement','investments and retirement','investment & retirement','investment and retirement','investments retirement','investment retirement','retirement'],
-      healthcare:['healthcare','health care']
-    };
-    Object.entries(FIN_COLS).forEach(([key,names])=>{const n=parseInt(get(...names));if(n>=1&&n<=4)finPriorities[key]=n;});
+    // Single column, comma-separated, order = rank — e.g. "Savings,Healthcare" means Savings=1, Healthcare=2
+    const raw=get('priorites','priorities','financial priorities','fin priorities','fin. priorities','top priorities');
+    const normLabel=s=>(s||'').toLowerCase().replace(/[’‘]/g,"'").trim();
+    raw.split(',').map(s=>s.trim()).filter(Boolean).slice(0,4).forEach((label,i)=>{
+      const match=FIN_PRIORITIES.find(f=>{const nl=normLabel(label);const fl=normLabel(f.label);return nl===fl||nl.includes(fl)||fl.includes(nl);});
+      if(match)finPriorities[match.key]=i+1;
+    });
   }
   return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),birthYear:parseInt(get('year of birth','birth year','dob year','yob','year'))||null,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',finPriorities,extraNotes:get('extra notes','notes','remarks','comments'),followUpDate:'',followUpHistory:[],rowIndex};
 }
@@ -2803,6 +2807,93 @@ window._confirmImport=async()=>{
   document.getElementById('importModal')?.remove();pendingImport=[];
   toast(`Imported: ${created} new, ${updated} updated${fail?`, ${fail} failed`:''} ✓`);
   await loadProspects();renderAll();
+};
+
+// ── Duplicate cleanup (e.g. stray copies from before the CSV import upsert fix) ──
+document.getElementById('btnDedupe').addEventListener('click',()=>window._dedupeModal());
+function activityScore(p){
+  let s=0;
+  if(p.pickedUp)s++;
+  if(p.contacted)s++;
+  if(p.meetingSet)s++;
+  if(p.met)s++;
+  if(p.purchased)s++;
+  if(p.referral)s++;
+  if((p.calledCount||0)>0)s++;
+  if(p.followUpDate)s++;
+  if(p.appointmentDate)s++;
+  if((p.extraNotes||'').trim())s++;
+  if((p.followUpHistory||[]).length)s++;
+  if(p.status&&p.status!=='New')s++;
+  if(p.finPriorities&&Object.keys(p.finPriorities).length)s++;
+  if(p.savings)s++;
+  if(p.policies)s++;
+  if(p.premiumPerYear)s++;
+  return s;
+}
+function findDupeGroups(scope){
+  const byKey={};
+  scope.forEach(p=>{
+    const ph=normPhone(p.phone);
+    if(!ph)return;
+    const key=p.batch+'|'+ph;
+    (byKey[key]=byKey[key]||[]).push(p);
+  });
+  return Object.values(byKey).filter(g=>g.length>1);
+}
+window._dedupeModal=()=>{
+  const scope=activeBatch?prospects.filter(p=>p.batch===activeBatch):prospects;
+  const groups=findDupeGroups(scope);
+  document.getElementById('dedupeModal')?.remove();
+  if(!groups.length){toast('No duplicate phone numbers found in this view ✓');return;}
+  const plan=groups.map(g=>{
+    const scored=g.map(p=>({p,score:activityScore(p)})).sort((a,b)=>b.score-a.score);
+    const keep=scored[0].p;
+    const losers=scored.slice(1).map(x=>x.p);
+    const conflicts=losers.filter(l=>activityScore(l)>0);
+    return{keep,losers,conflicts};
+  });
+  const autoDeletable=plan.filter(g=>g.conflicts.length===0&&g.losers.length);
+  const rows=plan.map(g=>{
+    const name=esc(g.keep.name||'—'),phone=esc(g.keep.phone||'—');
+    const hasConflict=g.conflicts.length>0;
+    return `<div style="padding:10px 12px;border:1px solid ${hasConflict?'rgba(245,158,11,.35)':'var(--border)'};border-radius:8px;margin-bottom:8px;background:${hasConflict?'rgba(245,158,11,.06)':'rgba(255,255,255,.02)'}">
+      <div style="font-weight:700;font-size:13px">${name} <span style="color:var(--dim);font-weight:400;font-size:11px">${phone}</span></div>
+      <div style="font-size:11px;color:#4ade80;margin-top:3px">✓ Keep: ${esc(g.keep.status||'New')}${activityScore(g.keep)?' (has tracked activity)':''}</div>
+      ${hasConflict
+        ?`<div style="font-size:11px;color:#fbbf24;margin-top:2px">⚠️ ${g.conflicts.length} other cop${g.conflicts.length===1?'y':'ies'} also ha${g.conflicts.length===1?'s':'ve'} tracked data — skipped, review manually</div>`
+        :`<div style="font-size:11px;color:var(--dim);margin-top:2px">🗑 Delete ${g.losers.length} empty duplicate cop${g.losers.length===1?'y':'ies'}</div>`}
+    </div>`;
+  }).join('');
+  const totalToDelete=autoDeletable.reduce((s,g)=>s+g.losers.length,0);
+  const modal=document.createElement('div');modal.className='modal-bg';modal.id='dedupeModal';
+  modal.innerHTML=`<div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
+    <h2>🧹 Duplicate Leads Found</h2>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:14px;line-height:1.6">
+      Found ${groups.length} phone number${groups.length===1?'':'s'} with duplicate entries in this view. For each, the copy with tracked activity (status, calls, notes, etc.) is kept and any completely blank duplicate is deleted. Groups where more than one copy has real data are left for you to check manually — nothing there gets touched.
+    </div>
+    <div style="max-height:360px;overflow-y:auto">${rows}</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('dedupeModal').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="window._confirmDedupe()" ${totalToDelete?'':'disabled'}>Delete ${totalToDelete} Empty Duplicate${totalToDelete===1?'':'s'}</button>
+    </div>
+  </div>`;
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  document.body.appendChild(modal);
+  window._pendingDedupe=autoDeletable;
+};
+window._confirmDedupe=async()=>{
+  const plan=window._pendingDedupe||[];
+  if(!plan.length)return;
+  document.getElementById('dedupeModal')?.remove();
+  let deleted=0,fail=0;
+  const ids=plan.flatMap(g=>g.losers.map(l=>l.id));
+  for(const id of ids){
+    try{await deleteDoc(doc(db,'prospects',id));deleted++;}catch{fail++;}
+  }
+  prospects=prospects.filter(p=>!ids.includes(p.id));
+  toast(`Removed ${deleted} duplicate${deleted===1?'':'s'}${fail?`, ${fail} failed`:''} ✓`);
+  renderAll();
 };
 
 // ── Filters ──

@@ -97,6 +97,9 @@
     .hero-card{background:rgba(6,13,24,.75);border:1px solid var(--border);border-radius:14px;padding:18px;backdrop-filter:blur(12px);transition:border-color .2s,transform .2s;animation:heroIn .5s cubic-bezier(.34,1.1,.64,1) backwards;}
     @keyframes heroIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
     .hero-card:hover{border-color:var(--gold-border);transform:translateY(-2px);}
+    .hero-card-link{cursor:pointer;border-color:rgba(20,184,166,.25);background:rgba(20,184,166,.05);}
+    .hero-card-link:hover{border-color:var(--teal);box-shadow:0 8px 28px rgba(20,184,166,.15);}
+    .hero-card-link .hero-value{background:linear-gradient(135deg,#5eead4,var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
     .hero-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
     .hero-value{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
     .hero-sub{font-size:11px;color:var(--dim);margin-top:4px;}
@@ -1926,6 +1929,11 @@ function showProspects(batchName=''){
 }
 window._viewBatch=name=>showProspects(name);
 window._viewAll=()=>showProspects('');
+window._viewNotes=()=>{
+  showProspects('');
+  document.getElementById('fNotes').value='yes';
+  renderAll();
+};
 
 // ── Dashboard render ──
 function renderDashboard(){
@@ -1938,11 +1946,15 @@ function renderHeroStats(){
   const fc=getFunnelCounts(prospects);
   const convRate=fc.total?((fc.converted/fc.total)*100).toFixed(1):0;
   const meetRate=fc.called?((fc.met/fc.called)*100).toFixed(1):0;
+  const notesCount=prospects.filter(p=>(p.extraNotes||'').trim()).length;
   document.getElementById('dashHero').innerHTML=`
     <div class="hero-card" style="animation-delay:.03s"><div class="hero-label">Total Leads</div><div class="hero-value">${fc.total}</div><div class="hero-sub">across ${batches.length} batches</div></div>
     <div class="hero-card" style="animation-delay:.09s"><div class="hero-label">Called</div><div class="hero-value">${fc.called}</div><div class="hero-sub">${fc.total?((fc.called/fc.total)*100).toFixed(1):0}% of all leads</div></div>
     <div class="hero-card" style="animation-delay:.15s"><div class="hero-label">Met</div><div class="hero-value">${fc.met}</div><div class="hero-sub">${meetRate}% of those called</div></div>
     <div class="hero-card" style="animation-delay:.21s"><div class="hero-label">Converted</div><div class="hero-value">${fc.converted}</div><div class="hero-sub">${convRate}% overall conversion</div></div>
+    <div class="hero-card hero-card-link" style="animation-delay:.27s" onclick="window._viewNotes()" title="Jump to every prospect you've written notes on, across every batch">
+      <div class="hero-label">📝 With Notes</div><div class="hero-value">${notesCount}</div><div class="hero-sub">click to view them all →</div>
+    </div>
   `;
 }
 

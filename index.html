@@ -393,7 +393,6 @@
     .fg label{display:block;font-size:10px;font-weight:700;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
     .fg input,.fg select,.fg textarea{width:100%;background:rgba(10,20,36,.8);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
     .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold-border);}
-    #d_notes{font-size:13px;line-height:1.6;}
     .fg textarea{resize:vertical;min-height:56px;}
     .fg select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a8d'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;}
     .check-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px;padding:9px 11px;background:rgba(10,20,36,.5);border-radius:8px;border:1px solid var(--border);}
@@ -760,7 +759,7 @@ window._exportCSV=()=>{
   const headers=['Name','Preferred Name','Gender','Date of Birth','Phone','NRIC','Batch','Status','Called Count','Last Called','Follow-up Date','Appointment Date','Picked Up','Contacted','Meeting Set','Met','Purchased','Referral',
     'Policies','Premium / Year Incepted','Savings',...FIN_PRIORITIES.map(f=>f.label),'Notes'];
   const csv=[headers.join(','),...rows.map(p=>[p.name,p.preferredName,p.gender,p.dob||p.birthYear||'',p.phone,p.nric,p.batch,p.status,p.calledCount||0,p.lastCalledDate||'',p.followUpDate||'',p.appointmentDate||'',p.pickedUp?1:0,p.contacted?1:0,p.meetingSet?1:0,p.met?1:0,p.purchased?1:0,p.referral?1:0,
-    p.policies||'',p.premiumPerYear||'',p.savings||'',...FIN_PRIORITIES.map(f=>p.finPriorities?.[f.key]||''),(p.extraNotes||'').replace(/\n/g,' ')].map(esc2).join(','))].join('\n');
+    p.policies||'',p.premiumPerYear||'',p.savings||'',...FIN_PRIORITIES.map(f=>p.finPriorities?.[f.key]||''),userNotesPreview(p).replace(/\n/g,' | ')].map(esc2).join(','))].join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=`colddb_${(activeBatch||'all').replace(/\s/g,'_')}_${today()}.csv`;a.click();
@@ -2594,12 +2593,14 @@ function renderDetailContent(p){
         </div>
       </div>
       ${apptAlert}
-      <div style="font-size:10px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Activity Log <span style="font-weight:400;text-transform:none;letter-spacing:0"> — auto-logs date changes; add notes manually below</span></div>
-      <div class="fu-history">${histHtml}</div>
+    </div>
+    <div class="d-section">
+      <div class="d-section-title">Notes</div>
       <div class="note-add-row">
-        <textarea class="note-add-input" id="d_note_input" rows="3" placeholder="Add a note (e.g. called, no answer, will retry Thu)… Enter to save, Shift+Enter for a new line"></textarea>
+        <textarea class="note-add-input" id="d_note_input" rows="4" placeholder="What happened, what she said, next steps… Enter to save, Shift+Enter for a new line"></textarea>
         <button class="note-add-btn" onclick="window._addNote('${p.id}')">+ Note</button>
       </div>
+      <div class="fu-history" style="margin-top:10px">${histHtml}</div>
     </div>
     ${isAXS?`<div class="d-section"><div class="d-section-title">AXS Profile</div>
       <div class="field-row single"><div class="fg"><label>Savings Bracket</label><select id="d_savings"><option value="" ${!p.savings?'selected':''}>—</option>${SAVINGS_OPTS.map(s=>`<option value="${s}" ${p.savings===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
@@ -2614,7 +2615,6 @@ function renderDetailContent(p){
         <label class="check-label"><input type="checkbox" id="d_referral" ${p.referral?'checked':''}/> <span style="color:var(--gold)">⭐ Referred by a client</span></label>
       </div>
     </div>
-    <div class="d-section"><div class="d-section-title">Notes</div><div class="field-row single"><div class="fg"><textarea id="d_notes" rows="6">${esc(p.extraNotes||'')}</textarea></div></div></div>
     <div class="d-actions">
       <button class="btn btn-save" onclick="window._saveDetail('${p.id}','${isAXS?'axs':'ekko'}')">Save</button>
       <button class="btn btn-convert" onclick="window._convert('${p.id}')">Convert to Client</button>
@@ -2636,7 +2636,7 @@ window._saveDetail=async(id,type)=>{
     hist.push({date:today(),note,type:'appt',updatedAt:new Date().toISOString()});
   }
   const _dobRaw=document.getElementById('d_dob').value.trim();const _dobP=parseDOB(_dobRaw);if(_dobRaw&&!_dobP){toast('Date of birth format not recognised — use DD/MM/YYYY');return;}
-  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,dob:_dobP?.fmt||null,birthYear:_dobP?.y||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist,extraNotes:document.getElementById('d_notes').value.trim()};
+  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,dob:_dobP?.fmt||null,birthYear:_dobP?.y||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist};
   if(type==='axs'){
     upd.savings=document.getElementById('d_savings').value;
     const fp={};FIN_PRIORITIES.forEach(f=>{const v=parseInt(document.getElementById(`d_fp_${f.key}`)?.value);if(v)fp[f.key]=v;});
@@ -2707,7 +2707,6 @@ function openAddModal(prefill={}){
     <div class="field-row"><div class="fg"><label>Gender</label><select id="an_gender"><option value="">—</option><option value="M" ${prefill.gender==='M'?'selected':''}>Male</option><option value="F" ${prefill.gender==='F'?'selected':''}>Female</option></select></div><div class="fg"><label>Date of Birth <span id="an_dob_hint" style="font-size:10px;color:var(--dim);font-weight:normal;margin-left:4px"></span></label><input id="an_dob" type="text" placeholder="DD/MM/YYYY or 24 Nov 1981" value="${prefill.dob||''}" oninput="window._dobHint('an_dob','an_dob_hint')"/></div></div>
     <div class="field-row"><div class="fg"><label>Batch *</label><select id="an_batch" onchange="window._anBatchChange()"><option value="">Select…</option>${batchOpts}</select></div><div class="fg"><label>Status</label><select id="an_status">${STATUSES.map(s=>`<option value="${s}" ${(prefill.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
     <div id="an_extra"></div>
-    <div class="field-row single" style="margin-top:4px"><div class="fg"><label>Extra Notes</label><textarea id="an_notes" rows="2">${esc(prefill.extraNotes||'')}</textarea></div></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="document.getElementById('addModal').remove()">Cancel</button>
       <button class="btn btn-primary" onclick="window._submitAdd()">Add Prospect</button>
@@ -2738,7 +2737,7 @@ window._submitAdd=async()=>{
   const isAXS=b?.type==='axs'||batch.toLowerCase().startsWith('axs');
   const btype=b?.type||(isAXS?'axs':'ekko');
   const _anDobRaw=document.getElementById('an_dob').value.trim();const _anDobP=parseDOB(_anDobRaw);if(_anDobRaw&&!_anDobP){toast('Date of birth format not recognised — use DD/MM/YYYY');return;}
-  const data={name,preferredName:document.getElementById('an_pname').value.trim(),phone:document.getElementById('an_phone').value.trim(),nric:document.getElementById('an_nric').value.trim(),gender:document.getElementById('an_gender').value,dob:_anDobP?.fmt||null,birthYear:_anDobP?.y||null,batch,leadType:btype,status:document.getElementById('an_status').value||'New',calledCount:0,pickedUp:false,contacted:false,meetingSet:false,met:false,purchased:false,referral:false,followUpDate:'',followUpHistory:[],extraNotes:document.getElementById('an_notes').value.trim(),policies:'',premiumPerYear:'',savings:'',finPriorities:{}};
+  const data={name,preferredName:document.getElementById('an_pname').value.trim(),phone:document.getElementById('an_phone').value.trim(),nric:document.getElementById('an_nric').value.trim(),gender:document.getElementById('an_gender').value,dob:_anDobP?.fmt||null,birthYear:_anDobP?.y||null,batch,leadType:btype,status:document.getElementById('an_status').value||'New',calledCount:0,pickedUp:false,contacted:false,meetingSet:false,met:false,purchased:false,referral:false,followUpDate:'',followUpHistory:[],policies:'',premiumPerYear:'',savings:'',finPriorities:{}};
   if(isAXS){
     data.savings=document.getElementById('an_savings')?.value||'';
     const fp={};FIN_PRIORITIES.forEach(f=>{const v=parseInt(document.getElementById(`an_fp_${f.key}`)?.value);if(v)fp[f.key]=v;});
@@ -2804,7 +2803,7 @@ function handleFile(file){
           }
           return (p[c]??'').toString();
         };
-        const cols=['name','phone','nric','gender','birthYear','policies','premiumPerYear','savings','finPriorities','extraNotes'];
+        const cols=['name','phone','nric','gender','birthYear','policies','premiumPerYear','savings','finPriorities'];
         const visible=cols.filter(c=>data.slice(0,5).some(p=>previewVal(p,c).trim()));
         document.getElementById('importPreview').innerHTML=`<div class="import-preview"><table><tr>${visible.map(c=>`<th>${c}</th>`).join('')}</tr>${data.slice(0,5).map(p=>`<tr>${visible.map(c=>`<td title="${esc(previewVal(p,c))}">${esc(previewVal(p,c))}</td>`).join('')}</tr>`).join('')}</table></div>`;
         statusEl.textContent=`${data.length} prospects found · preview shows first 5`;
@@ -2853,14 +2852,14 @@ function mapCSVRow(headers,row,batch,rowIndex=0){
   }
   const dobP=parseCSVDOB(get('date of birth','dob','d.o.b','d.o.b.','birthdate','birth date'));
   const birthYear=dobP?.y||parseInt(get('year of birth','birth year','dob year','yob','year'))||null;
-  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),dob:dobP?.fmt||null,birthYear,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',finPriorities,extraNotes:get('extra notes','notes','remarks','comments'),followUpDate:'',followUpHistory:[],rowIndex};
+  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),dob:dobP?.fmt||null,birthYear,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',finPriorities,followUpDate:'',followUpHistory:[],rowIndex};
 }
 function normPhone(s){return String(s||'').replace(/\D/g,'');}
 // Re-importing the same batch should update existing leads (matched by phone),
 // not duplicate them — and must never clobber work already tracked in the app.
 const IMPORT_PRESERVE=['status','calledCount','lastCalledDate','pickedUp','contacted','meetingSet','met','purchased',
   'referral','referredBy','followUpDate','followUpTime','followUpHistory','appointmentDate','appointmentTime',
-  'appointmentLocation','googleApptEventId','googleTaskId','extraNotes','savings'];
+  'appointmentLocation','googleApptEventId','googleTaskId','savings'];
 window._confirmImport=async()=>{
   if(!pendingImport.length)return;
   const btn=document.getElementById('btnConfirmImport');btn.textContent='Importing…';btn.disabled=true;
@@ -2908,7 +2907,6 @@ function activityScore(p){
   if((p.calledCount||0)>0)s++;
   if(p.followUpDate)s++;
   if(p.appointmentDate)s++;
-  if((p.extraNotes||'').trim())s++;
   if((p.followUpHistory||[]).length)s++;
   if(p.status&&p.status!=='New')s++;
   // Note: profile/CSV fields (savings, policies, premiumPerYear, finPriorities)
@@ -3000,10 +2998,14 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keydown',e=>{
   // Escape — close modals / panel / go home
   if(e.key==='Escape'){
-    if(document.getElementById('batchModal')){document.getElementById('batchModal').remove();return;}
-    if(document.getElementById('importModal')){document.getElementById('importModal').remove();return;}
-    if(document.getElementById('addModal')){document.getElementById('addModal').remove();return;}
+    // Close whichever modal/popover is on top first — appt/import/add/templates/
+    // dedupe/etc. all share the .modal-bg overlay class, so this covers all of
+    // them generically instead of needing every id listed by hand.
+    const openModal=document.querySelector('.modal-bg');
+    if(openModal){openModal.remove();return;}
     if(document.getElementById('statusPicker')){document.getElementById('statusPicker').remove();return;}
+    if(document.getElementById('fuDatePicker')){document.getElementById('fuDatePicker').remove();return;}
+    if(document.getElementById('batchDatePicker')){document.getElementById('batchDatePicker').remove();return;}
     if(selectedId){closeDetail();return;}
     if(currentView==='prospects'){showDashboard();return;}
     return;

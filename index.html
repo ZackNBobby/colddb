@@ -1896,7 +1896,7 @@ function getFunnelCounts(arr){
   const total=arr.length;
   const called=arr.filter(p=>p.pickedUp||(p.calledCount||0)>0||['Called','Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
   const contacted=arr.filter(p=>p.contacted||['Contacted','Meeting Set','Met','Converted'].includes(p.status)).length;
-  const apptSet=arr.filter(p=>p.appointmentDate||['Met','Converted'].includes(p.status)).length;
+  const apptSet=arr.filter(p=>p.appointmentDate||p.met||['Met','Converted'].includes(p.status)).length;
   const met=arr.filter(p=>p.met||['Met','Converted'].includes(p.status)).length;
   const converted=arr.filter(p=>p.purchased||p.status==='Converted').length;
   const cold=arr.filter(p=>p.status==='Cold').length;

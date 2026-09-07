@@ -1375,6 +1375,12 @@ function daysSince(d){if(!d)return 'Never';if(d===today())return 'Today';const n
 function fmtShortDate(d){if(!d)return'—';const[,m,day]=d.split('-');const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return`${parseInt(day,10)} ${mo[parseInt(m,10)-1]}`;}
 function fuClass(d){if(!d)return '';const t=today();return d<t?'fu-overdue':d===t?'fu-today':'';}
 function needsFollowUp(p){return p.status==='Met'&&!p.purchased&&p.status!=='Cancelled'&&p.status!=='Cold';}
+// "Has notes" means you actually typed and saved one via the note box —
+// NOT the CSV's Extra Note/Remarks column, which can carry unrelated import data.
+function hasUserNotes(p){return(p.followUpHistory||[]).some(h=>h.type==='note');}
+function userNotesPreview(p){
+  return(p.followUpHistory||[]).filter(h=>h.type==='note').map(h=>`${h.date}: ${h.note}`).join('\n');
+}
 window._dobHint=(inputId,hintId)=>{
   const raw=document.getElementById(inputId)?.value.trim()||'';
   const hint=document.getElementById(hintId);if(!hint)return;
@@ -1946,7 +1952,7 @@ function renderHeroStats(){
   const fc=getFunnelCounts(prospects);
   const convRate=fc.total?((fc.converted/fc.total)*100).toFixed(1):0;
   const meetRate=fc.called?((fc.met/fc.called)*100).toFixed(1):0;
-  const notesCount=prospects.filter(p=>(p.extraNotes||'').trim()).length;
+  const notesCount=prospects.filter(hasUserNotes).length;
   document.getElementById('dashHero').innerHTML=`
     <div class="hero-card" style="animation-delay:.03s"><div class="hero-label">Total Leads</div><div class="hero-value">${fc.total}</div><div class="hero-sub">across ${batches.length} batches</div></div>
     <div class="hero-card" style="animation-delay:.09s"><div class="hero-label">Called</div><div class="hero-value">${fc.called}</div><div class="hero-sub">${fc.total?((fc.called/fc.total)*100).toFixed(1):0}% of all leads</div></div>
@@ -2226,7 +2232,7 @@ function getFiltered(){
     if(gender&&p.gender!==gender)return false;
     if(purch==='yes'&&!p.purchased)return false;
     if(purch==='no'&&p.purchased)return false;
-    if(notesQ){const hasNotes=!!(p.extraNotes||'').trim();if(notesQ==='yes'&&!hasNotes)return false;if(notesQ==='no'&&hasNotes)return false;}
+    if(notesQ){const hasNotes=hasUserNotes(p);if(notesQ==='yes'&&!hasNotes)return false;if(notesQ==='no'&&hasNotes)return false;}
     if(policyQ&&!(p.policies||'').toLowerCase().includes(policyQ))return false;
     return true;
   });
@@ -2341,7 +2347,7 @@ function renderList(){
     const gNorm=(p.gender||'').trim().toUpperCase().charAt(0);
     const gColor=gNorm==='M'?'#60a5fa':gNorm==='F'?'#f472b6':'var(--dim)';
     const policyText=isAXS?(p.savings||'—'):(p.policies||'—');
-    const hasNotes=p.extraNotes&&p.extraNotes.trim().length>0;
+    const hasNotes=hasUserNotes(p);
     const fuTime=p.followUpTime?`<span style="font-size:10px;color:var(--dim);display:block">${p.followUpTime}</span>`:'';
     const followUpCell=needsFollowUp(p)
       ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p.followUpDate||'Set date!'}</span>${fuTime}</span>`
@@ -2352,7 +2358,7 @@ function renderList(){
       :`<span class="appt-date" style="color:var(--muted)">—</span>`;
     return `<tr class="${cls}" data-id="${p.id}" style="animation-delay:${Math.min(i*.025,.4)}s"
         onclick="window._select('${p.id}')"
-        ${hasNotes?`onmouseenter="window._showTip(event,'${esc(p.extraNotes?.replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
+        ${hasNotes?`onmouseenter="window._showTip(event,'${esc(userNotesPreview(p).replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>
       <td>
         <div class="p-name">${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}

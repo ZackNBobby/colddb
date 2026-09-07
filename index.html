@@ -2360,12 +2360,12 @@ window._flag=async(id,field,val)=>{
   if(row){
     const tds=row.querySelectorAll('td');
     const setChk=(tdIdx,f)=>{const inp=tds[tdIdx]?.querySelector('.tgl input');if(inp)inp.checked=!!p2[f];};
-    setChk(10,'pickedUp');setChk(11,'contacted');setChk(12,'meetingSet');setChk(13,'met');setChk(14,'purchased');setChk(15,'referral');
+    setChk(9,'pickedUp');setChk(10,'contacted');setChk(11,'meetingSet');setChk(12,'met');setChk(13,'purchased');setChk(14,'referral');
     // Re-render follow-up cell if met/purchased changed (affects the pulse dot)
     if(pIdx>=0||field==='met'||field==='purchased'){
       const needsFU=p2.status==='Met'&&!p2.purchased;
       const fuc=fuClass(p2.followUpDate);
-      const fuCell=tds[8];
+      const fuCell=tds[7];
       if(fuCell)fuCell.innerHTML=needsFU
         ?`<span class="fu-needed"><span class="fu-pulse"></span><span class="fu-date ${fuc}" style="color:var(--amber)">${p2.followUpDate||'Set date!'}</span></span>`
         :`<span class="fu-date ${fuc}">${p2.followUpDate||'—'}</span>`;

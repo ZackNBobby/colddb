@@ -2825,10 +2825,10 @@ function activityScore(p){
   if((p.extraNotes||'').trim())s++;
   if((p.followUpHistory||[]).length)s++;
   if(p.status&&p.status!=='New')s++;
-  if(p.finPriorities&&Object.keys(p.finPriorities).length)s++;
-  if(p.savings)s++;
-  if(p.policies)s++;
-  if(p.premiumPerYear)s++;
+  // Note: profile/CSV fields (savings, policies, premiumPerYear, finPriorities)
+  // are deliberately NOT counted here — both the real lead and a blank stray
+  // duplicate can equally have those from the same import, so they don't
+  // distinguish "actually worked" from "never touched".
   return s;
 }
 function findDupeGroups(scope){

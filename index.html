@@ -279,6 +279,10 @@
     .wa-quick.missed:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.5);}
     .wa-quick.appt{color:#34d399;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08);}
     .wa-quick.appt:hover{background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.5);}
+    .wa-quick.reinforce{color:#a78bfa;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08);}
+    .wa-quick.reinforce:hover{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.5);}
+    .wa-quick.custom{color:#38bdf8;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.08);}
+    .wa-quick.custom:hover{background:rgba(56,189,248,.18);border-color:rgba(56,189,248,.5);}
     /* Template modal textareas */
     .tmpl-textarea{width:100%;box-sizing:border-box;padding:8px 10px 20px;border-radius:8px;border:1px solid rgba(51,65,85,.5);background:rgba(12,24,55,.9);color:#f1f5f9;font-size:12px;font-family:inherit;resize:vertical;min-height:90px;line-height:1.5;}
     .tmpl-textarea:focus{outline:none;border-color:rgba(240,165,0,.5);}
@@ -702,7 +706,8 @@ let pendingImport=[];
 let currentView='dashboard';
 let activeBatch=''; // batch filter for prospects view
 let sortState={col:null,dir:'asc'};
-let msgTemplates={ekko_missed:'',ekko_appt:'',axs_missed:'',axs_appt:''};
+let msgTemplates={ekko_missed:'',ekko_appt:'',ekko_reinforce:'',axs_missed:'',axs_appt:'',axs_reinforce:''};
+let customWaCategories=[]; // [{key,label}] user-defined extra WA template categories
 
 // ── Income Insurance commission rates (from IAFA-Comms-Tracker) ──
 const WAIVER_TERMS=[{l:"2 years",y:7.50},{l:"3 years",y:8.00},{l:"4 years",y:8.50},{l:"5 years",y:10.00},{l:"6-9 years",y:10.50},{l:"10-14 years",y:22.00},{l:"15-19 years",y:26.00},{l:"20+ years",y:40.00}];
@@ -775,8 +780,12 @@ async function loadAll(){
 
 async function loadTemplates(){
   try{
-    const snap=await getDoc(doc(db,'settings','msgTemplates'));
-    if(snap.exists())msgTemplates={...msgTemplates,...snap.data()};
+    const [tmplSnap,catSnap]=await Promise.all([
+      getDoc(doc(db,'settings','msgTemplates')),
+      getDoc(doc(db,'settings','waCategories'))
+    ]);
+    if(tmplSnap.exists())msgTemplates={...msgTemplates,...tmplSnap.data()};
+    if(catSnap.exists())customWaCategories=catSnap.data().categories||[];
   }catch(e){console.warn('templates load:',e);}
 }
 
@@ -1758,7 +1767,13 @@ window._waQuickOpen=async(pid,type)=>{
   if(!p||!p.phone){toast('No phone number for this lead');return;}
   const tpl=lookupTemplate(getBatchType(p.batch),type);
   if(!tpl){toast('No template set — click 💬 to add one.');return;}
-  const msg=resolveTemplate(tpl,p);
+  const extra={};
+  if((type==='reinforce'||type==='appt')&&p.appointmentDate){
+    extra.date=fmtShortDate(p.appointmentDate);
+    extra.time=p.appointmentTime||'';
+    extra.location=p.appointmentLocation||'';
+  }
+  const msg=resolveTemplate(tpl,p,extra);
   const n=(p.phone||'').replace(/\D/g,'');
   window.open(`https://wa.me/65${n}?text=${encodeURIComponent(msg)}`,'_blank');
   // Auto-update status (missed only — appt handled by _apptModal)
@@ -1807,6 +1822,15 @@ window._templatesModal=()=>{
   }).join('');
   const panels=types.map((type,i)=>{
     const color=templateColor(type);
+    const customFields=customWaCategories.map((c,ci)=>`
+      <div class="tmpl-field">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span class="tmpl-label" style="color:#38bdf8">✏️ ${esc(c.label)}</span>
+          ${i===0?`<button class="btn btn-ghost" style="padding:1px 8px;font-size:10px;color:#f87171;border-color:rgba(239,68,68,.25)" onclick="window._deleteTmplCategory(${ci})">✕ Remove</button>`:''}
+        </div>
+        <textarea id="tmpl_${type}_${c.key}" class="tmpl-textarea">${esc(msgTemplates[type+'_'+c.key]||'')}</textarea>
+        <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
+      </div>`).join('');
     return`<div class="tmpl-panel${i===0?' active':''}" data-type="${type}">
       <div class="tmpl-field">
         <span class="tmpl-label" style="color:${color}">📵 Missed Call</span>
@@ -1814,18 +1838,25 @@ window._templatesModal=()=>{
         <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
       </div>
       <div class="tmpl-field">
+        <span class="tmpl-label" style="color:#a78bfa">🔁 Reinforce Appointment</span>
+        <textarea id="tmpl_${type}_reinforce" class="tmpl-textarea" placeholder="e.g. Hi {salutation} {name}, just a reminder our appt is on {date} at {time}...">${esc(msgTemplates[type+'_reinforce']||'')}</textarea>
+        <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
+      </div>
+      <div class="tmpl-field">
         <span class="tmpl-label" style="color:${color}">📅 Appointment Set</span>
         <textarea id="tmpl_${type}_appt" class="tmpl-textarea">${esc(msgTemplates[type+'_appt']||'')}</textarea>
         <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
       </div>
+      ${customFields}
+      ${i===0?`<div style="margin-top:10px"><button class="btn btn-ghost" style="font-size:11px;color:#38bdf8;border-color:rgba(56,189,248,.3)" onclick="window._addTmplCategory()">+ Add Category</button></div>`:''}
     </div>`;
   }).join('');
   ov.innerHTML=`<div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
     <h2>💬 WhatsApp Message Templates</h2>
     <div style="font-size:11px;color:var(--dim);margin-bottom:16px;line-height:1.6">
       Placeholders: <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{salutation}</code> → Mr / Ms &nbsp;|&nbsp;
-      <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{name}</code> → lead name<br>
-      <span style="opacity:.7">e.g. "Hi {salutation} {name}, I tried calling you just now..."</span><br>
+      <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{name}</code> → lead name &nbsp;|&nbsp;
+      <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{date}</code> <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{time}</code> <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{location}</code> → for Appt &amp; Reinforce<br>
       <span style="opacity:.7">Leave a type's templates blank to fall back to the EKKO templates.</span>
     </div>
     <div class="tmpl-tabs">${tabs}</div>
@@ -1837,20 +1868,62 @@ window._templatesModal=()=>{
   </div>`;
   ov.addEventListener('click',()=>ov.remove());
   document.body.appendChild(ov);
-  types.forEach(type=>{_attachTmplResizeGrip(`tmpl_${type}_missed`);_attachTmplResizeGrip(`tmpl_${type}_appt`);});
+  types.forEach(type=>{
+    _attachTmplResizeGrip(`tmpl_${type}_missed`);
+    _attachTmplResizeGrip(`tmpl_${type}_reinforce`);
+    _attachTmplResizeGrip(`tmpl_${type}_appt`);
+    customWaCategories.forEach(c=>_attachTmplResizeGrip(`tmpl_${type}_${c.key}`));
+  });
+};
+
+function _captureTmplValues(){
+  const kinds=['missed','reinforce','appt',...customWaCategories.map(c=>c.key)];
+  knownBatchTypes().forEach(type=>{
+    kinds.forEach(kind=>{
+      const el=document.getElementById(`tmpl_${type}_${kind}`);
+      if(el)msgTemplates[type+'_'+kind]=el.value;
+    });
+  });
+}
+
+window._addTmplCategory=()=>{
+  _captureTmplValues();
+  const label=prompt('New category name (e.g. "Follow-up Call"):');
+  if(!label?.trim())return;
+  const key=label.trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  if(!key||['missed','appt','reinforce'].includes(key)||customWaCategories.find(c=>c.key===key)){
+    toast('That name already exists or is reserved');return;
+  }
+  customWaCategories=[...customWaCategories,{key,label:label.trim()}];
+  window._templatesModal();
+};
+
+window._deleteTmplCategory=(idx)=>{
+  _captureTmplValues();
+  if(!confirm(`Remove the "${customWaCategories[idx]?.label}" category? Templates saved for this category will be deleted.`))return;
+  customWaCategories=customWaCategories.filter((_,i)=>i!==idx);
+  window._templatesModal();
 };
 
 window._saveTemplates=async()=>{
+  _captureTmplValues();
+  const kinds=['missed','reinforce','appt',...customWaCategories.map(c=>c.key)];
   const updated={};
   knownBatchTypes().forEach(type=>{
-    updated[type+'_missed']=document.getElementById(`tmpl_${type}_missed`).value.trim();
-    updated[type+'_appt']=document.getElementById(`tmpl_${type}_appt`).value.trim();
+    kinds.forEach(kind=>{
+      const el=document.getElementById(`tmpl_${type}_${kind}`);
+      if(el)updated[type+'_'+kind]=el.value.trim();
+    });
   });
   msgTemplates={...msgTemplates,...updated};
   try{
-    await setDoc(doc(db,'settings','msgTemplates'),msgTemplates);
+    await Promise.all([
+      setDoc(doc(db,'settings','msgTemplates'),msgTemplates),
+      setDoc(doc(db,'settings','waCategories'),{categories:customWaCategories})
+    ]);
     document.getElementById('templatesModal')?.remove();
     toast('Templates saved ✓');
+    renderList();
   }catch(e){toast('Error saving: '+e.message);}
 };
 
@@ -2365,7 +2438,8 @@ function renderList(){
       <td>
         <a class="wa-link" href="${waLink(p.phone)}" target="_blank" onclick="event.stopPropagation()" title="Open WhatsApp">${esc(p.phone||'—')}</a>
         ${p.phone?`<div class="wa-quick-btns">
-          <span class="wa-quick missed" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','missed')" title="Send missed call message">📵 Missed</span>
+          ${p.appointmentDate?`<span class="wa-quick reinforce" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','reinforce')" title="Send reinforce message">🔁 Reinforce</span>`:`<span class="wa-quick missed" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','missed')" title="Send missed call message">📵 Missed</span>`}
+          ${customWaCategories.map(c=>`<span class="wa-quick custom" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','${c.key}')" title="${esc(c.label)}">${esc(c.label)}</span>`).join('')}
           <span class="wa-quick appt" onclick="event.stopPropagation();window._apptModal('${p.id}')" title="Set appointment">📅 Appt</span>
         </div>`:''}
       </td>

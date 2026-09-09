@@ -745,6 +745,7 @@ onAuthStateChanged(auth,user=>{
     document.getElementById('authScreen').style.display='none';
     document.getElementById('app').classList.add('visible');
     document.getElementById('userEmail').textContent=user.email;
+    _signedInEmail=user.email||null;
     loadAll();
     startGTasksWarmup();
   }else{
@@ -1407,6 +1408,9 @@ const GTASKS_CLIENT_ID='229769820838-g8efhhsetd1bfj7jk9mjlpjfhmq3bvf8.apps.googl
 let _gTasksTokenClient=null;
 let _gTasksToken=null;
 let _gTasksListId=null;
+let _signedInEmail=null; // pins the silent token renewal to this exact Google account,
+// so Google never has to show an account-chooser/verification screen to disambiguate
+// between multiple signed-in sessions in the browser.
 
 const GTOK_KEY='gtasks_tok_v2'; // v2 = Tasks + Calendar scopes
 function initGoogleTasks(){
@@ -1415,6 +1419,7 @@ function initGoogleTasks(){
   _gTasksTokenClient=google.accounts.oauth2.initTokenClient({
     client_id:GTASKS_CLIENT_ID,
     scope:'https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/calendar.events',
+    hint:_signedInEmail||undefined,
     callback:()=>{}
   });
   try{const s=JSON.parse(localStorage.getItem(GTOK_KEY)||'null');if(s&&s.exp>Date.now()+60000)_gTasksToken=s.t;}catch(e){}
@@ -1445,7 +1450,7 @@ async function _getGTasksToken(){
       localStorage.setItem(GTOK_KEY,JSON.stringify({t:resp.access_token,exp:Date.now()+resp.expires_in*1000}));
       resolve(resp.access_token);
     };
-    _gTasksTokenClient.requestAccessToken({prompt:''});
+    _gTasksTokenClient.requestAccessToken({prompt:'',hint:_signedInEmail||undefined});
   });
 }
 

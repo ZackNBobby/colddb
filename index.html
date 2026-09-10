@@ -2767,11 +2767,15 @@ window._editNoteEntry=(id,idx)=>{
   document.getElementById('editNoteModal')?.remove();
   const ov=document.createElement('div');
   ov.className='modal-bg';ov.id='editNoteModal';
-  ov.innerHTML=`<div class="modal" style="max-width:500px" onclick="event.stopPropagation()">
-    <h2 style="margin-bottom:6px">✎ Edit Note</h2>
-    <div style="font-size:10px;color:var(--dim);margin-bottom:12px">Enter to save · Shift+Enter for new line · Esc to cancel</div>
-    <textarea id="editNoteTA" style="width:100%;box-sizing:border-box;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:8px;color:var(--text);font-size:13px;padding:10px 12px;resize:vertical;min-height:140px;font-family:'Inter',sans-serif;line-height:1.6;outline:none">${esc(h.note)}</textarea>
-    <div class="modal-footer" style="margin-top:12px">
+  ov.style.cssText='padding:12px';
+  ov.innerHTML=`<div class="modal" style="max-width:820px;width:100%;height:min(88vh,700px);display:flex;flex-direction:column;padding:22px 24px 18px" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-shrink:0">
+      <h2 style="margin:0">✎ Edit Note</h2>
+      <button class="btn btn-ghost" style="padding:4px 10px;font-size:16px;line-height:1" onclick="document.getElementById('editNoteModal').remove()">✕</button>
+    </div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:12px;flex-shrink:0">Enter to save &nbsp;·&nbsp; Shift+Enter for new line &nbsp;·&nbsp; Esc to cancel</div>
+    <textarea id="editNoteTA" style="flex:1;width:100%;box-sizing:border-box;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:10px;color:var(--text);font-size:14px;padding:14px 16px;resize:none;font-family:'Inter',sans-serif;line-height:1.7;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--gold-border)'">${esc(h.note)}</textarea>
+    <div class="modal-footer" style="margin-top:14px;flex-shrink:0">
       <button class="btn btn-primary" onclick="window._saveNoteEdit('${id}',${idx})">Save</button>
       <button class="btn btn-ghost" onclick="document.getElementById('editNoteModal').remove()">Cancel</button>
     </div>

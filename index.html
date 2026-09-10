@@ -2764,31 +2764,39 @@ window._editNoteEntry=(id,idx)=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const hist=p.followUpHistory||[];
   const h=hist[idx];if(!h)return;
-  const el=document.querySelector(`.fu-entry[data-idx="${idx}"]`);if(!el)return;
-  el.innerHTML=`
-    <span class="fu-entry-icon">📝</span>
-    <span class="fu-entry-date" style="white-space:nowrap">${esc(h.date)}</span>
-    <textarea style="flex:1;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:6px;color:var(--text);font-size:12px;padding:5px 8px;resize:vertical;min-height:54px;font-family:inherit;line-height:1.5;outline:none">${esc(h.note)}</textarea>
-    <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
-      <span class="fu-entry-action" style="color:#4ade80" onclick="window._saveNoteEdit('${id}',${idx})" title="Save">✓</span>
-      <span class="fu-entry-action del" onclick="window._cancelNoteEdit('${id}')" title="Cancel">✕</span>
-    </div>`;
-  el.querySelector('textarea')?.focus();
+  document.getElementById('editNoteModal')?.remove();
+  const ov=document.createElement('div');
+  ov.className='modal-bg';ov.id='editNoteModal';
+  ov.innerHTML=`<div class="modal" style="max-width:500px" onclick="event.stopPropagation()">
+    <h2 style="margin-bottom:6px">✎ Edit Note</h2>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:12px">Enter to save · Shift+Enter for new line · Esc to cancel</div>
+    <textarea id="editNoteTA" style="width:100%;box-sizing:border-box;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:8px;color:var(--text);font-size:13px;padding:10px 12px;resize:vertical;min-height:140px;font-family:'Inter',sans-serif;line-height:1.6;outline:none">${esc(h.note)}</textarea>
+    <div class="modal-footer" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="window._saveNoteEdit('${id}',${idx})">Save</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('editNoteModal').remove()">Cancel</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',()=>ov.remove());
+  document.body.appendChild(ov);
+  const ta=document.getElementById('editNoteTA');
+  ta.focus();
+  ta.setSelectionRange(ta.value.length,ta.value.length);
+  ta.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();ov.remove();}
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();window._saveNoteEdit(id,idx);}
+  });
 };
 window._saveNoteEdit=async(id,idx)=>{
-  const el=document.querySelector(`.fu-entry[data-idx="${idx}"]`);
-  const ta=el?.querySelector('textarea');if(!ta)return;
+  const ta=document.getElementById('editNoteTA');if(!ta)return;
   const updated=ta.value.trim();
   if(!updated){toast('Note can\'t be empty — use ✕ to delete instead');return;}
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const hist=[...(p.followUpHistory||[])];
   if(!hist[idx])return;
   hist[idx]={...hist[idx],note:updated};
+  document.getElementById('editNoteModal')?.remove();
   await updateProspect(id,{followUpHistory:hist});
   const p2=prospects.find(x=>x.id===id);if(p2)renderDetailContent(p2);
-};
-window._cancelNoteEdit=id=>{
-  const p=prospects.find(x=>x.id===id);if(p)renderDetailContent(p);
 };
 window._deleteNoteEntry=async(id,idx)=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;

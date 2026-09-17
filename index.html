@@ -270,6 +270,20 @@
 
     .p-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
     .p-aka{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .type-pill{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:1px 7px;border-radius:4px;cursor:pointer;border:1px solid;margin-top:2px;transition:all .15s;letter-spacing:.02em;user-select:none;}
+    .type-pill.smart{color:#818cf8;border-color:rgba(129,140,248,.35);background:rgba(129,140,248,.1);}
+    .type-pill.smart:hover{background:rgba(129,140,248,.22);border-color:rgba(129,140,248,.6);}
+    .type-pill.blur{color:#fb923c;border-color:rgba(251,146,60,.35);background:rgba(251,146,60,.1);}
+    .type-pill.blur:hover{background:rgba(251,146,60,.22);border-color:rgba(251,146,60,.6);}
+    .type-pill.none{color:var(--muted);border-color:rgba(255,255,255,.06);background:transparent;opacity:0;transition:opacity .15s;}
+    .prospect-table tbody tr:hover .type-pill.none{opacity:.45;}
+    .ptype-btn{flex:1;padding:8px 10px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:all .17s;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;}
+    .ptype-btn.smart-on{color:#818cf8;border-color:#818cf8;background:rgba(129,140,248,.15);box-shadow:0 0 0 2px rgba(129,140,248,.2);}
+    .ptype-btn.smart-off{color:var(--muted);border-color:var(--border);background:transparent;}
+    .ptype-btn.smart-off:hover{color:#818cf8;border-color:rgba(129,140,248,.5);background:rgba(129,140,248,.07);}
+    .ptype-btn.blur-on{color:#fb923c;border-color:#fb923c;background:rgba(251,146,60,.15);box-shadow:0 0 0 2px rgba(251,146,60,.2);}
+    .ptype-btn.blur-off{color:var(--muted);border-color:var(--border);background:transparent;}
+    .ptype-btn.blur-off:hover{color:#fb923c;border-color:rgba(251,146,60,.5);background:rgba(251,146,60,.07);}
     .p-phone{color:var(--muted);font-size:11px;white-space:nowrap;}
 
     /* WhatsApp quick-action buttons */
@@ -2444,6 +2458,7 @@ function renderList(){
         <div class="p-name" ${hasNotes?`onmouseenter="event.stopPropagation();window._showTip(event,'${esc(userNotesPreview(p).replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
         ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
+        <span class="type-pill ${p.prospectType||'none'}" onclick="event.stopPropagation();window._cycleProspectType('${p.id}')">${p.prospectType==='smart'?'🧠 Smart':p.prospectType==='blur'?'🔥 Blur':'+ type'}</span>
       </td>
       <td>
         <a class="wa-link" href="${waLink(p.phone)}" target="_blank" onclick="event.stopPropagation()" title="Open WhatsApp">${esc(p.phone||'—')}</a>
@@ -2664,6 +2679,16 @@ function renderDetailContent(p){
       </div>
     </div>
     <div class="d-section">
+      <div class="d-section-title" style="display:flex;align-items:center;gap:6px">Prospect Type
+        <span title="Smart — analytical prospect who needs value insights, better offers and multiple follow-ups before committing. Give them content, data and reasons.&#10;&#10;Blur — decision is driven by emotion and rapport. Build connection, sell the pain, create urgency — they need a push more than a pitch." style="cursor:help;font-size:10px;color:var(--dim);background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:50%;width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">ℹ</span>
+        ${p.prospectType?`<span style="font-size:9px;color:var(--muted);font-weight:400">click active button to unset</span>`:''}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="ptype-btn ${p.prospectType==='smart'?'smart-on':'smart-off'}" onclick="window._setProspectType('${p.id}','smart')" title="Analytical prospect — needs value insights, detailed follow-ups and better offers before committing">🧠 Smart</button>
+        <button class="ptype-btn ${p.prospectType==='blur'?'blur-on':'blur-off'}" onclick="window._setProspectType('${p.id}','blur')" title="Emotion-driven prospect — build rapport, sell the pain, apply gentle pressure to get them to commit">🔥 Blur</button>
+      </div>
+    </div>
+    <div class="d-section">
       <div class="d-section-title">Follow-up &amp; Appointment</div>
       <div class="field-row">
         <div class="fg">
@@ -2812,6 +2837,30 @@ window._deleteNoteEntry=async(id,idx)=>{
 };
 window._convert=id=>{const p=prospects.find(x=>x.id===id);if(p)convertToClient(p);};
 window._delete=id=>deleteProspect(id);
+
+window._cycleProspectType=async(id)=>{
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const order=[null,'smart','blur'];
+  const next=order[(order.indexOf(p.prospectType||null)+1)%3];
+  await _setProspectType(id,next);
+};
+window._setProspectType=async(id,type)=>{
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const newType=(p.prospectType===type)?null:type; // click active → unset
+  await updateProspect(id,{prospectType:newType},true);
+  // Patch table row pill without full re-render
+  const row=document.querySelector(`tr[data-id="${id}"]`);
+  if(row){
+    const pill=row.querySelector('.type-pill');
+    if(pill){
+      pill.className=`type-pill ${newType||'none'}`;
+      pill.textContent=newType==='smart'?'🧠 Smart':newType==='blur'?'🔥 Blur':'+ type';
+    }
+  }
+  // Re-render detail panel to update button states
+  const p2=prospects.find(x=>x.id===id);
+  if(p2&&selectedId===id)renderDetailContent(p2);
+};
 
 // ── Add Prospect ──
 document.getElementById('btnAdd').addEventListener('click',()=>openAddModal());

@@ -1605,7 +1605,7 @@ window._apptModal=(pid)=>{
       </div>
       <div>
         <label class="field-label">Location</label>
-        <input class="field-input" id="appt_loc" type="text" value="${p.appointmentLocation||'Our Office'}" placeholder="e.g. Our Office, Starbucks..."/>
+        <input class="field-input" id="appt_loc" type="text" value="${p.appointmentLocation||'NTUC Trade Union House'}" placeholder="e.g. NTUC Trade Union House, Starbucks..."/>
       </div>
     </div>
     <div class="modal-footer">
@@ -1644,7 +1644,7 @@ window._clearAppt=async(pid)=>{
 window._confirmAppt=async(pid,type)=>{
   const apptDate=document.getElementById('appt_date').value;
   const apptTime=document.getElementById('appt_time').value;
-  const location=document.getElementById('appt_loc').value.trim()||'Our Office';
+  const location=document.getElementById('appt_loc').value.trim()||'NTUC Trade Union House';
   if(!apptDate){toast('Please pick a date');return;}
   if(!apptTime){toast('Please pick a time');return;}
   // Pre-fetch Google token NOW while still in user-gesture context (before window.open blocks it)
@@ -2806,7 +2806,7 @@ window._saveDetail=async(id,type)=>{
   }
   if(apptRescheduled){
     const p3=prospects.find(x=>x.id===id)||{...p,...upd};
-    await syncApptToGoogleCalendar(p3,newAppt,p.appointmentTime||'09:00',p.appointmentLocation||'Our Office');
+    await syncApptToGoogleCalendar(p3,newAppt,p.appointmentTime||'09:00',p.appointmentLocation||'NTUC Trade Union House');
   }
 };
 

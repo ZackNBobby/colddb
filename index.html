@@ -1150,7 +1150,7 @@ function closingModal(existing=null){
     </div>
   </div>`;
   document.body.appendChild(modal);
-  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  onBgClick(modal,()=>modal.remove());
 
   function getAvailRiders(prodName){
     if(!prodName||!PROD[prodName])return[];
@@ -1379,6 +1379,9 @@ async function convertToClient(p){
 
 // ── Helpers ──
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Attach a "click outside to close" handler that is immune to drag-select:
+// only closes if BOTH mousedown AND mouseup originated on the backdrop element.
+function onBgClick(el,fn){let down=false;el.addEventListener('mousedown',e=>{down=e.target===el;});el.addEventListener('click',e=>{if(down&&e.target===el)fn();down=false;});}
 let toastTimer=null;
 function toast(msg,dur=3500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),dur);}
 function parseDOB(str){
@@ -1615,7 +1618,7 @@ window._apptModal=(pid)=>{
     </div>
   </div>`;
   document.body.appendChild(ov);
-  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  onBgClick(ov,()=>ov.remove());
   document.getElementById('appt_date').focus();
 };
 
@@ -1899,7 +1902,7 @@ window._templatesModal=()=>{
       <button class="btn btn-ghost" onclick="document.getElementById('templatesModal').remove()">Cancel</button>
     </div>
   </div>`;
-  ov.addEventListener('click',()=>ov.remove());
+  onBgClick(ov,()=>ov.remove());
   document.body.appendChild(ov);
   types.forEach(type=>{
     _attachTmplResizeGrip(`tmpl_${type}_missed`);
@@ -2838,7 +2841,7 @@ window._editNoteEntry=(id,idx)=>{
       <button class="btn btn-ghost" onclick="document.getElementById('editNoteModal').remove()">Cancel</button>
     </div>
   </div>`;
-  ov.addEventListener('click',()=>ov.remove());
+  onBgClick(ov,()=>ov.remove());
   document.body.appendChild(ov);
   const ta=document.getElementById('editNoteTA');
   ta.focus();
@@ -3159,7 +3162,7 @@ window._dedupeModal=()=>{
       <button class="btn btn-primary" onclick="window._confirmDedupe()" ${totalToDelete?'':'disabled'}>Delete ${totalToDelete} Empty Duplicate${totalToDelete===1?'':'s'}</button>
     </div>
   </div>`;
-  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  onBgClick(modal,()=>modal.remove());
   document.body.appendChild(modal);
   window._pendingDedupe=autoDeletable;
 };

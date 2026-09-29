@@ -104,6 +104,11 @@
     .hero-value{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
     .hero-sub{font-size:11px;color:var(--dim);margin-top:4px;}
 
+    .week-summary{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:rgba(6,13,24,.6);border:1px solid var(--border);border-radius:12px;backdrop-filter:blur(10px);}
+    .week-stat{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);font-size:12px;white-space:nowrap;}
+    .week-stat-num{font-weight:800;font-size:14px;}
+    .week-stat-label{color:var(--dim);font-size:11px;}
+    .week-summary-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
     .dash-section-title{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
     .dash-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
@@ -323,10 +328,10 @@
     .tmpl-panel.active{display:grid;}
     @media(max-width:520px){.tmpl-panel{grid-template-columns:1fr;}}
     /* WhatsApp link */
-    .wa-link{color:var(--muted);text-decoration:none;font-size:11px;display:flex;align-items:center;gap:4px;transition:color .15s;}
-    .wa-link:hover{color:#25d366;}
-    .wa-link::before{content:'💬';font-size:10px;opacity:0;transition:opacity .15s;}
-    .wa-link:hover::before{opacity:1;}
+    .call-link{color:var(--muted);text-decoration:none;font-size:11px;display:flex;align-items:center;gap:4px;transition:color .15s;}
+    .call-link:hover{color:#4ade80;}
+    .call-link::before{content:'📞';font-size:10px;opacity:0;transition:opacity .15s;}
+    .call-link:hover::before{opacity:1;}
 
     .batch-tag{display:inline-block;background:rgba(14,24,40,.9);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 6px;font-size:10px;color:var(--dim);font-weight:600;}
     .axs-tag{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.25);color:#c084fc;}
@@ -600,6 +605,8 @@
     <div style="max-width:1300px;margin:0 auto;">
 
     <div class="dash-hero" id="dashHero"></div>
+
+    <div id="weekSummary" style="margin-bottom:20px"></div>
 
     <div class="dash-section-title">Conversion Funnel</div>
     <div class="funnel-wrap" id="funnelWrap"></div>
@@ -2062,8 +2069,35 @@ window._viewNotes=()=>{
 // ── Dashboard render ──
 function renderDashboard(){
   renderHeroStats();
+  renderWeekSummary();
   renderFunnel();
   renderBatchGrid();
+}
+
+function renderWeekSummary(){
+  const el=document.getElementById('weekSummary');if(!el)return;
+  // Monday of current week
+  const now=new Date();
+  const monOffset=(now.getDay()+6)%7; // days since Monday
+  const mon=new Date(now);mon.setDate(now.getDate()-monOffset);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  const fmt=d=>d.toLocaleDateString('en-SG',{day:'numeric',month:'short'});
+  const weekLabel=`${fmt(mon)} – ${fmt(sun)}`;
+  const monStr=mon.toISOString().slice(0,10);
+  const sunStr=sun.toISOString().slice(0,10);
+  const inWeek=d=>d&&d>=monStr&&d<=sunStr;
+  const calledWk=prospects.filter(p=>inWeek(p.lastCalledDate)).length;
+  const apptsWk=prospects.filter(p=>inWeek(p.appointmentDate)).length;
+  const pipeline=prospects.filter(p=>(p.pickedUp||p.contacted||p.meetingSet||p.met)&&!p.purchased).length;
+  const converted=prospects.filter(p=>p.purchased||p.status==='Converted').length;
+  el.innerHTML=`
+    <div class="week-summary-label">This week &nbsp;<span style="font-weight:400;opacity:.6">${weekLabel}</span></div>
+    <div class="week-summary">
+      <div class="week-stat"><span style="font-size:13px">📞</span><span class="week-stat-num" style="color:#60a5fa">${calledWk}</span><span class="week-stat-label">called this week</span></div>
+      <div class="week-stat"><span style="font-size:13px">📅</span><span class="week-stat-num" style="color:#c084fc">${apptsWk}</span><span class="week-stat-label">appts this week</span></div>
+      <div class="week-stat"><span style="font-size:13px">🔥</span><span class="week-stat-num" style="color:#fb923c">${pipeline}</span><span class="week-stat-label">active pipeline</span></div>
+      <div class="week-stat"><span style="font-size:13px">✅</span><span class="week-stat-num" style="color:#4ade80">${converted}</span><span class="week-stat-label">total converted</span></div>
+    </div>`;
 }
 
 function renderHeroStats(){
@@ -2500,10 +2534,11 @@ function renderList(){
         <div class="type-btns" style="display:${p.met?'flex':'none'}">
           <span class="type-pill ${p.prospectType==='smart'?'smart':'smart-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','smart')">🧠 Smart</span>
           <span class="type-pill ${p.prospectType==='blur'?'blur':'blur-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','blur')">🔥 Blur</span>
+          ${p.interestLevel?`<span class="type-pill" style="${p.interestLevel==='hot'?'color:#f87171;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.1)':p.interestLevel==='warm'?'color:#fbbf24;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.1)':'color:#60a5fa;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.1)'}">${p.interestLevel==='hot'?'🔥 Hot':p.interestLevel==='warm'?'😊 Warm':'❄️ Cold'}</span>`:''}
         </div>
       </td>
       <td>
-        <a class="wa-link" href="${waLink(p.phone)}" target="_blank" onclick="event.stopPropagation()" title="Open WhatsApp">${esc(p.phone||'—')}</a>
+        <a class="call-link" href="${p.phone?'tel:+65'+(p.phone.replace(/\D/g,'')):'#'}" onclick="event.stopPropagation()" title="Tap to call">${esc(p.phone||'—')}</a>
         ${p.phone?`<div class="wa-quick-btns">
           ${p.appointmentDate?`<span class="wa-quick reinforce" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','reinforce')" title="Send reinforce message">🔁 Reinforce</span>`:`<span class="wa-quick missed" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','missed')" title="Send missed call message">📵 Missed</span>`}
           ${(()=>{if(!p.appointmentDate)return'';const t=today(),tom=new Date(Date.now()+86400000).toISOString().slice(0,10);return(p.appointmentDate===t||p.appointmentDate===tom)?`<span class="wa-quick remind" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','remind')" title="Appointment ${p.appointmentDate===t?'TODAY':'tomorrow'} — send reminder">⏰ Remind</span>`:''})()}
@@ -2594,6 +2629,8 @@ window._flag=async(id,field,val)=>{
     if(selectedId===id)renderDetailContent(p2);
   };
   applyToDom();
+  // Post-meeting capture popup when Met is freshly ticked
+  if(field==='met'&&val&&!before.met)_metCaptureModal(id);
   // Persist in the background; roll back + re-render if it fails.
   try{
     await updateDoc(doc(db,'prospects',id),{...upd,updatedAt:serverTimestamp()});
@@ -2603,6 +2640,53 @@ window._flag=async(id,field,val)=>{
     toast('Error saving: '+e.message);
   }
 };
+
+function _metCaptureModal(id){
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const name=p.preferredName||p.name||'prospect';
+  const existing=document.getElementById('metCaptureModal');if(existing)existing.remove();
+  const ov=document.createElement('div');ov.id='metCaptureModal';ov.className='modal-overlay';
+  ov.innerHTML=`<div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+    <h2 style="margin-bottom:4px">✅ Met ${esc(name)}</h2>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:18px">Quick capture — takes 10 seconds</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Interest Level</div>
+      <div style="display:flex;gap:8px">
+        <button class="met-heat-btn" data-heat="hot" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#f87171;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s" onclick="document.querySelectorAll('.met-heat-btn').forEach(b=>b.classList.remove('sel'));this.classList.add('sel');this.style.background='rgba(239,68,68,.25)';this.style.borderColor='#f87171'">🔥 Hot</button>
+        <button class="met-heat-btn" data-heat="warm" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);color:#fbbf24;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s" onclick="document.querySelectorAll('.met-heat-btn').forEach(b=>b.classList.remove('sel'));this.classList.add('sel');this.style.background='rgba(251,191,36,.25)';this.style.borderColor='#fbbf24'">😊 Warm</button>
+        <button class="met-heat-btn" data-heat="cold" style="flex:1;padding:9px 6px;border-radius:9px;border:1px solid rgba(96,165,250,.35);background:rgba(96,165,250,.08);color:#60a5fa;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s" onclick="document.querySelectorAll('.met-heat-btn').forEach(b=>b.classList.remove('sel'));this.classList.add('sel');this.style.background='rgba(96,165,250,.25)';this.style.borderColor='#60a5fa'">❄️ Cold</button>
+      </div>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Quick Note <span style="font-weight:400;opacity:.6">(optional)</span></div>
+      <textarea id="metCaptureNote" placeholder="e.g. Interested in critical illness, follow up next week…" style="width:100%;box-sizing:border-box;height:80px;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:10px;color:var(--text);font-size:13px;padding:10px 12px;resize:none;font-family:'Inter',sans-serif;line-height:1.6;outline:none" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--gold-border)'"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="window._saveMetCapture('${id}')">Save</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('metCaptureModal').remove()">Skip</button>
+    </div>
+  </div>`;
+  onBgClick(ov,()=>ov.remove());
+  document.body.appendChild(ov);
+  setTimeout(()=>document.getElementById('metCaptureNote')?.focus(),80);
+}
+
+window._saveMetCapture=async(id)=>{
+  const heatBtn=document.querySelector('.met-heat-btn.sel');
+  const heat=heatBtn?.dataset.heat||null;
+  const note=document.getElementById('metCaptureNote')?.value.trim()||'';
+  document.getElementById('metCaptureModal')?.remove();
+  if(!heat&&!note)return;
+  const p=prospects.find(x=>x.id===id);if(!p)return;
+  const upd={};
+  if(heat)upd.interestLevel=heat;
+  if(note){
+    const hist=[...(p.followUpHistory||[]),{date:today(),note,type:'met_note',updatedAt:new Date().toISOString()}];
+    upd.followUpHistory=hist;
+  }
+  await updateProspect(id,upd,false);
+};
+
 window._addCall=async id=>{
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const c=(p.calledCount||0)+1;
@@ -2732,6 +2816,7 @@ function renderDetailContent(p){
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="ptype-btn ${p.prospectType==='smart'?'smart-on':'smart-off'}" onclick="window._setProspectType('${p.id}','smart')" title="Analytical prospect — needs value insights, detailed follow-ups and better offers before committing">🧠 Smart</button>
         <button class="ptype-btn ${p.prospectType==='blur'?'blur-on':'blur-off'}" onclick="window._setProspectType('${p.id}','blur')" title="Emotion-driven prospect — build rapport, sell the pain, apply gentle pressure to get them to commit">🔥 Blur</button>
+        ${p.interestLevel?`<span style="margin-left:4px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;${p.interestLevel==='hot'?'color:#f87171;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)':p.interestLevel==='warm'?'color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3)':'color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3)'}">${p.interestLevel==='hot'?'🔥 Hot':p.interestLevel==='warm'?'😊 Warm':'❄️ Cold'}</span>`:''}
       </div>
     </div>
     <div class="d-section">

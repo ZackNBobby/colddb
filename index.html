@@ -303,6 +303,9 @@
     .wa-quick.appt:hover{background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.5);}
     .wa-quick.reinforce{color:#a78bfa;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.08);}
     .wa-quick.reinforce:hover{background:rgba(167,139,250,.18);border-color:rgba(167,139,250,.5);}
+    .wa-quick.remind{color:#fb923c;border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.12);animation:remindPulse 2s ease-in-out infinite;}
+    .wa-quick.remind:hover{background:rgba(251,146,60,.22);border-color:rgba(251,146,60,.6);animation:none;}
+    @keyframes remindPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.35)}50%{box-shadow:0 0 0 3px rgba(251,146,60,0)}}
     .wa-quick.custom{color:#38bdf8;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.08);}
     .wa-quick.custom:hover{background:rgba(56,189,248,.18);border-color:rgba(56,189,248,.5);}
     /* Template modal textareas */
@@ -729,7 +732,7 @@ let currentView='dashboard';
 let activeBatch=''; // batch filter for prospects view
 let prospectTypeFilter=''; // 'smart'|'blur'|''
 let sortState={col:null,dir:'asc'};
-let msgTemplates={ekko_missed:'',ekko_appt:'',ekko_reinforce:'',axs_missed:'',axs_appt:'',axs_reinforce:''};
+let msgTemplates={ekko_missed:'',ekko_appt:'',ekko_reinforce:'',ekko_remind:'',axs_missed:'',axs_appt:'',axs_reinforce:'',axs_remind:''};
 let customWaCategories=[]; // [{key,label}] user-defined extra WA template categories
 
 // ── Income Insurance commission rates (from IAFA-Comms-Tracker) ──
@@ -1804,7 +1807,7 @@ window._waQuickOpen=async(pid,type)=>{
   const tpl=lookupTemplate(getBatchType(p.batch),type);
   if(!tpl){toast('No template set — click 💬 to add one.');return;}
   const extra={};
-  if((type==='reinforce'||type==='appt')&&p.appointmentDate){
+  if((type==='reinforce'||type==='remind'||type==='appt')&&p.appointmentDate){
     extra.date=fmtShortDate(p.appointmentDate);
     extra.time=p.appointmentTime||'';
     extra.location=p.appointmentLocation||'';
@@ -1879,6 +1882,11 @@ window._templatesModal=()=>{
         <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
       </div>
       <div class="tmpl-field">
+        <span class="tmpl-label" style="color:#fb923c">⏰ Appointment Reminder <span style="font-weight:400;font-size:10px;opacity:.7">(shows day-of &amp; day-before)</span></span>
+        <textarea id="tmpl_${type}_remind" class="tmpl-textarea" placeholder="e.g. Hi {salutation} {name}, friendly reminder your appt is today at {time} at {location} 😊">${esc(msgTemplates[type+'_remind']||'')}</textarea>
+        <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
+      </div>
+      <div class="tmpl-field">
         <span class="tmpl-label" style="color:${color}">📅 Appointment Set</span>
         <textarea id="tmpl_${type}_appt" class="tmpl-textarea">${esc(msgTemplates[type+'_appt']||'')}</textarea>
         <div class="tmpl-resize-grip" title="Drag to resize">⠿</div>
@@ -1892,7 +1900,7 @@ window._templatesModal=()=>{
     <div style="font-size:11px;color:var(--dim);margin-bottom:16px;line-height:1.6">
       Placeholders: <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{salutation}</code> → Mr / Ms &nbsp;|&nbsp;
       <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{name}</code> → lead name &nbsp;|&nbsp;
-      <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{date}</code> <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{time}</code> <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{location}</code> → for Appt &amp; Reinforce<br>
+      <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{date}</code> <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{time}</code> <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">{location}</code> → for Appt, Reinforce &amp; Remind<br>
       <span style="opacity:.7">Leave a type's templates blank to fall back to the EKKO templates.</span>
     </div>
     <div class="tmpl-tabs">${tabs}</div>
@@ -1907,13 +1915,14 @@ window._templatesModal=()=>{
   types.forEach(type=>{
     _attachTmplResizeGrip(`tmpl_${type}_missed`);
     _attachTmplResizeGrip(`tmpl_${type}_reinforce`);
+    _attachTmplResizeGrip(`tmpl_${type}_remind`);
     _attachTmplResizeGrip(`tmpl_${type}_appt`);
     customWaCategories.forEach(c=>_attachTmplResizeGrip(`tmpl_${type}_${c.key}`));
   });
 };
 
 function _captureTmplValues(){
-  const kinds=['missed','reinforce','appt',...customWaCategories.map(c=>c.key)];
+  const kinds=['missed','reinforce','remind','appt',...customWaCategories.map(c=>c.key)];
   knownBatchTypes().forEach(type=>{
     kinds.forEach(kind=>{
       const el=document.getElementById(`tmpl_${type}_${kind}`);
@@ -1943,7 +1952,7 @@ window._deleteTmplCategory=(idx)=>{
 
 window._saveTemplates=async()=>{
   _captureTmplValues();
-  const kinds=['missed','reinforce','appt',...customWaCategories.map(c=>c.key)];
+  const kinds=['missed','reinforce','remind','appt',...customWaCategories.map(c=>c.key)];
   const updated={};
   knownBatchTypes().forEach(type=>{
     kinds.forEach(kind=>{
@@ -2497,6 +2506,7 @@ function renderList(){
         <a class="wa-link" href="${waLink(p.phone)}" target="_blank" onclick="event.stopPropagation()" title="Open WhatsApp">${esc(p.phone||'—')}</a>
         ${p.phone?`<div class="wa-quick-btns">
           ${p.appointmentDate?`<span class="wa-quick reinforce" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','reinforce')" title="Send reinforce message">🔁 Reinforce</span>`:`<span class="wa-quick missed" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','missed')" title="Send missed call message">📵 Missed</span>`}
+          ${(()=>{if(!p.appointmentDate)return'';const t=today(),tom=new Date(Date.now()+86400000).toISOString().slice(0,10);return(p.appointmentDate===t||p.appointmentDate===tom)?`<span class="wa-quick remind" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','remind')" title="Appointment ${p.appointmentDate===t?'TODAY':'tomorrow'} — send reminder">⏰ Remind</span>`:''})()}
           ${customWaCategories.map(c=>`<span class="wa-quick custom" onclick="event.stopPropagation();window._waQuickOpen('${p.id}','${c.key}')" title="${esc(c.label)}">${esc(c.label)}</span>`).join('')}
           <span class="wa-quick appt" onclick="event.stopPropagation();window._apptModal('${p.id}')" title="Set appointment">📅 Appt</span>
         </div>`:''}

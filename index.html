@@ -2210,9 +2210,9 @@ function renderStatsView(){
     const mSummary=`<div class="stats-summary-row" style="margin-bottom:6px">
       <div class="stats-sum-card"><div class="stats-sum-num" style="color:#60a5fa">${mTot.called}</div><div class="stats-sum-label">📞 Calls</div></div>
       <div class="stats-sum-card"><div class="stats-sum-num" style="color:#2dd4bf">${mTot.contacted}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.contacted,mTot.called)}</span></div><div class="stats-sum-label">Contacted</div></div>
-      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#c084fc">${mTot.appts}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.appts,mTot.contacted||mTot.called)}</span></div><div class="stats-sum-label">📅 Appt Set</div></div>
-      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#fbbf24">${mTot.met}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.met,mTot.appts)}</span></div><div class="stats-sum-label">🤝 Met</div></div>
-      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#4ade80">${mTot.converted}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.converted,mTot.met)}</span></div><div class="stats-sum-label">✅ Converted</div></div>
+      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#c084fc">${mTot.appts}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.appts,mTot.called)}</span></div><div class="stats-sum-label">📅 Appt Set</div></div>
+      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#fbbf24">${mTot.met}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.met,mTot.called)}</span></div><div class="stats-sum-label">🤝 Met</div></div>
+      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#4ade80">${mTot.converted}<span style="font-size:13px;opacity:.7;margin-left:6px">${pct(mTot.converted,mTot.called)}</span></div><div class="stats-sum-label">✅ Converted</div></div>
     </div>
     ${apptListHtml('month-'+mStart.slice(0,7),mTot.apptProspects)}`;
 
@@ -2232,11 +2232,11 @@ function renderStatsView(){
           ${fArr}
           ${fStep(s.contacted,pct(s.contacted,s.called),'Contacted','#2dd4bf',!s.contacted)}
           ${fArr}
-          ${fStep(s.appts,pct(s.appts,s.contacted||s.called),'📅 Appt Set','#c084fc',!s.appts)}
+          ${fStep(s.appts,pct(s.appts,s.called),'📅 Appt Set','#c084fc',!s.appts)}
           ${fArr}
-          ${fStep(s.met,pct(s.met,s.appts),'🤝 Met','#fbbf24',!s.met)}
+          ${fStep(s.met,pct(s.met,s.called),'🤝 Met','#fbbf24',!s.met)}
           ${fArr}
-          ${fStep(s.converted,pct(s.converted,s.met),'✅ Converted','#4ade80',!s.converted)}
+          ${fStep(s.converted,pct(s.converted,s.called),'✅ Converted','#4ade80',!s.converted)}
         </div>
         ${apptListHtml(lid,s.apptProspects)}
       </div>`;
@@ -2245,7 +2245,7 @@ function renderStatsView(){
     el.innerHTML=navHtml+`<div class="dash-section-title" style="margin-bottom:10px">${monthLabel} — Monthly Total</div>`+mSummary+
       `<div class="dash-section-title" style="margin-top:20px;margin-bottom:10px">Weekly Breakdown</div>`+cards+
       `<div style="margin-top:12px;font-size:10px;color:var(--dim);line-height:1.7">
-        % = conversion from previous stage &nbsp;·&nbsp; Contacted &amp; Met/Converted tracked from today onwards
+        % = of calls made this period &nbsp;·&nbsp; Contacted &amp; Met/Converted tracked from today onwards
       </div>`;
   } else {
     const months=[];
@@ -2262,16 +2262,16 @@ function renderStatsView(){
           <div class="stats-month-stats">
             <span class="stats-month-stat"><span style="color:#60a5fa">📞</span>&nbsp;<span class="stats-month-stat-num" style="color:#60a5fa;${!s.called?'opacity:.3':''}">${s.called||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">calls</span></span>
             <span class="stats-month-stat"><span style="color:#2dd4bf;font-size:10px">●</span>&nbsp;<span class="stats-month-stat-num" style="color:#2dd4bf;${!s.contacted?'opacity:.3':''}">${s.contacted||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">contacted</span>&nbsp;<span style="color:#2dd4bf;font-size:10px;opacity:.7">${s.called?'('+pct(s.contacted,s.called)+')':''}</span></span>
-            <span class="stats-month-stat"><span style="color:#c084fc">📅</span>&nbsp;<span class="stats-month-stat-num" style="color:#c084fc;${!s.appts?'opacity:.3':''}">${s.appts||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">appts</span>&nbsp;<span style="color:#c084fc;font-size:10px;opacity:.7">${s.contacted||s.called?'('+pct(s.appts,s.contacted||s.called)+')':''}</span></span>
-            <span class="stats-month-stat"><span style="color:#fbbf24">🤝</span>&nbsp;<span class="stats-month-stat-num" style="color:#fbbf24;${!s.met?'opacity:.3':''}">${s.met||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">met</span>&nbsp;<span style="color:#fbbf24;font-size:10px;opacity:.7">${s.appts?'('+pct(s.met,s.appts)+')':''}</span></span>
-            <span class="stats-month-stat"><span style="color:#4ade80">✅</span>&nbsp;<span class="stats-month-stat-num" style="color:#4ade80;${!s.converted?'opacity:.3':''}">${s.converted||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">conv.</span>&nbsp;<span style="color:#4ade80;font-size:10px;opacity:.7">${s.met?'('+pct(s.converted,s.met)+')':''}</span></span>
+            <span class="stats-month-stat"><span style="color:#c084fc">📅</span>&nbsp;<span class="stats-month-stat-num" style="color:#c084fc;${!s.appts?'opacity:.3':''}">${s.appts||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">appts</span>&nbsp;<span style="color:#c084fc;font-size:10px;opacity:.7">${s.called?'('+pct(s.appts,s.called)+')':''}</span></span>
+            <span class="stats-month-stat"><span style="color:#fbbf24">🤝</span>&nbsp;<span class="stats-month-stat-num" style="color:#fbbf24;${!s.met?'opacity:.3':''}">${s.met||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">met</span>&nbsp;<span style="color:#fbbf24;font-size:10px;opacity:.7">${s.called?'('+pct(s.met,s.called)+')':''}</span></span>
+            <span class="stats-month-stat"><span style="color:#4ade80">✅</span>&nbsp;<span class="stats-month-stat-num" style="color:#4ade80;${!s.converted?'opacity:.3':''}">${s.converted||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">conv.</span>&nbsp;<span style="color:#4ade80;font-size:10px;opacity:.7">${s.called?'('+pct(s.converted,s.called)+')':''}</span></span>
           </div>
         </div>
         ${apptListHtml(m.key,s.apptProspects)}
       </div>`;
     }).join('');
     el.innerHTML=navHtml+`<div style="display:flex;flex-direction:column;gap:8px">${rows}</div>
-      <div style="margin-top:16px;font-size:10px;color:var(--dim)">% = conversion from previous stage &nbsp;·&nbsp; Contacted, Met &amp; Converted tracked from today onwards</div>`;
+      <div style="margin-top:16px;font-size:10px;color:var(--dim)">% = of calls made this period &nbsp;·&nbsp; Contacted, Met &amp; Converted tracked from today onwards</div>`;
   }
 }
 

@@ -2100,27 +2100,17 @@ function showStats(){
 }
 
 function _statsRange(start,end){
+  // Funnel anchored to call date: "of people I called this period, how many progressed?"
+  const calledInPeriod=prospects.filter(p=>p.lastCalledDate&&p.lastCalledDate>=start&&p.lastCalledDate<=end);
+  // Appt list: appointments falling in this period (calendar view of who to meet)
   const apptProspects=prospects.filter(p=>p.appointmentDate&&p.appointmentDate>=start&&p.appointmentDate<=end);
-  // For prospects without a stamped date (pre-feature), fall back to best available proxy
-  const contacted=prospects.filter(p=>{
-    const d=p.contactedDate||(p.contacted?p.lastCalledDate:null);
-    return d&&d>=start&&d<=end;
-  }).length;
-  const met=prospects.filter(p=>{
-    const d=p.metDate||(p.met?p.appointmentDate:null);
-    return d&&d>=start&&d<=end;
-  }).length;
-  const converted=prospects.filter(p=>{
-    const d=p.purchasedDate||(p.purchased?p.metDate||(p.met?p.appointmentDate:null)||(p.contacted?p.lastCalledDate:null):null);
-    return d&&d>=start&&d<=end;
-  }).length;
   return{
-    called:prospects.filter(p=>p.lastCalledDate&&p.lastCalledDate>=start&&p.lastCalledDate<=end).length,
-    contacted,
-    appts:apptProspects.length,
+    called:calledInPeriod.length,
+    contacted:calledInPeriod.filter(p=>p.pickedUp||p.contacted).length,
+    appts:calledInPeriod.filter(p=>p.meetingSet).length,
     apptProspects,
-    met,
-    converted,
+    met:calledInPeriod.filter(p=>p.met).length,
+    converted:calledInPeriod.filter(p=>p.purchased).length,
   };
 }
 
@@ -2245,7 +2235,7 @@ function renderStatsView(){
     el.innerHTML=navHtml+`<div class="dash-section-title" style="margin-bottom:10px">${monthLabel} — Monthly Total</div>`+mSummary+
       `<div class="dash-section-title" style="margin-top:20px;margin-bottom:10px">Weekly Breakdown</div>`+cards+
       `<div style="margin-top:12px;font-size:10px;color:var(--dim);line-height:1.7">
-        % = of calls made this period &nbsp;·&nbsp; Contacted &amp; Met/Converted tracked from today onwards
+        % = of calls made this period &nbsp;·&nbsp; Appt list shows meetings scheduled for this period
       </div>`;
   } else {
     const months=[];
@@ -2271,7 +2261,7 @@ function renderStatsView(){
       </div>`;
     }).join('');
     el.innerHTML=navHtml+`<div style="display:flex;flex-direction:column;gap:8px">${rows}</div>
-      <div style="margin-top:16px;font-size:10px;color:var(--dim)">% = of calls made this period &nbsp;·&nbsp; Contacted, Met &amp; Converted tracked from today onwards</div>`;
+      <div style="margin-top:16px;font-size:10px;color:var(--dim)">% = of calls made this period &nbsp;·&nbsp; Appt list shows meetings scheduled for this period</div>`;
   }
 }
 

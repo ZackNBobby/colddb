@@ -2108,38 +2108,59 @@ function _weeksInMonth(year,month){
   return weeks;
 }
 
+function _statsEarliestMonth(){
+  // Find the earliest month that has any tracked data
+  const dates=prospects.flatMap(p=>[p.lastCalledDate,p.appointmentDate,p.metDate,p.purchasedDate]).filter(Boolean).sort();
+  if(!dates.length)return{year:new Date().getFullYear(),month:new Date().getMonth()};
+  const d=new Date(dates[0]);return{year:d.getFullYear(),month:d.getMonth()};
+}
+
 function renderStatsView(){
   const el=document.getElementById('statsInner');if(!el)return;
   const now=new Date();
+  const earliest=_statsEarliestMonth();
+  // Max months back allowed = how far back earliest month is
+  const maxBack=(now.getFullYear()-earliest.year)*12+(now.getMonth()-earliest.month);
+  // Clamp offset so we can't navigate before earliest
+  if(_statsMonthOffset<-maxBack)_statsMonthOffset=-maxBack;
+
   const refDate=new Date(now.getFullYear(),now.getMonth()+_statsMonthOffset,1);
   const yr=refDate.getFullYear(),mo=refDate.getMonth();
   const monthLabel=refDate.toLocaleDateString('en-SG',{month:'long',year:'numeric'});
-  const todayStr=today();
   const currentWeekMon=(d=>{const m=new Date(d);m.setDate(m.getDate()-((m.getDay()+6)%7));return m.toISOString().slice(0,10);})(now);
+  const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—';
 
-  // Nav bar
+  const canGoBack=_statsMonthOffset>-maxBack;
+  const canGoFwd=_statsMonthOffset<0;
+
   const navHtml=`
     <div class="stats-nav">
       <button class="stats-mode-btn ${_statsMode==='week'?'active':''}" onclick="window._statsSetMode('week')">Week View</button>
       <button class="stats-mode-btn ${_statsMode==='month'?'active':''}" onclick="window._statsSetMode('month')">Month View</button>
       ${_statsMode==='week'?`<div class="stats-month-nav">
-        <button class="stats-arrow" onclick="window._statsNav(-1)">‹</button>
+        <button class="stats-arrow" onclick="window._statsNav(-1)" ${!canGoBack?'disabled style="opacity:.35;cursor:default"':''}>‹</button>
         <div class="stats-month-lbl">${monthLabel}</div>
-        <button class="stats-arrow" onclick="window._statsNav(1)" ${_statsMonthOffset>=0?'disabled style="opacity:.35;cursor:default"':''}>›</button>
+        <button class="stats-arrow" onclick="window._statsNav(1)" ${!canGoFwd?'disabled style="opacity:.35;cursor:default"':''}>›</button>
       </div>`:''}
     </div>`;
 
   if(_statsMode==='week'){
     const weeks=_weeksInMonth(yr,mo);
-    // Monthly totals
     const mStart=new Date(yr,mo,1).toISOString().slice(0,10);
     const mEnd=new Date(yr,mo+1,0).toISOString().slice(0,10);
     const mTot=_statsRange(mStart,mEnd);
+    const mApptPct=pct(mTot.appts,mTot.called);
     const maxCalls=Math.max(1,...weeks.map(w=>_statsRange(w.start,w.end).called));
 
     const summaryHtml=`<div class="stats-summary-row">
       <div class="stats-sum-card"><div class="stats-sum-num" style="color:#60a5fa">${mTot.called}</div><div class="stats-sum-label">📞 Calls this month</div></div>
-      <div class="stats-sum-card"><div class="stats-sum-num" style="color:#c084fc">${mTot.appts}</div><div class="stats-sum-label">📅 Appts set</div></div>
+      <div class="stats-sum-card">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div class="stats-sum-num" style="color:#c084fc">${mTot.appts}</div>
+          <div style="font-size:14px;font-weight:700;color:#c084fc;opacity:.7">${mApptPct}</div>
+        </div>
+        <div class="stats-sum-label">📅 Appts (% of calls)</div>
+      </div>
       <div class="stats-sum-card"><div class="stats-sum-num" style="color:#fbbf24">${mTot.met}</div><div class="stats-sum-label">🤝 Met</div></div>
       <div class="stats-sum-card"><div class="stats-sum-num" style="color:#4ade80">${mTot.converted}</div><div class="stats-sum-label">✅ Converted</div></div>
     </div>`;
@@ -2148,12 +2169,15 @@ function renderStatsView(){
       const s=_statsRange(w.start,w.end);
       const isCurrent=w.start===currentWeekMon;
       const barW=maxCalls?Math.max((s.called/maxCalls)*100,s.called>0?6:0):0;
+      const apptPct=pct(s.appts,s.called);
       const numCell=(n,color)=>`<td class="stats-num ${n===0?'stats-zero':''}" style="color:${color}">${n||'—'}</td>`;
+      const pctCell=(p,base)=>`<td class="stats-num" style="color:#c084fc;opacity:${base===0?.25:1};font-size:11px">${base===0?'—':p}</td>`;
       return`<tr class="stats-row${isCurrent?' current-week':''}">
         <td><div class="stats-week-lbl">${w.label}${isCurrent?` <span style="font-size:9px;color:var(--gold);font-weight:700;vertical-align:middle">THIS WEEK</span>`:''}</div></td>
         <td class="stats-bar-cell"><div class="stats-bar-wrap"><div class="stats-bar" style="width:${barW}%;background:#60a5fa"></div></div></td>
         ${numCell(s.called,'#60a5fa')}
         ${numCell(s.appts,'#c084fc')}
+        ${pctCell(apptPct,s.called)}
         ${numCell(s.met,'#fbbf24')}
         ${numCell(s.converted,'#4ade80')}
       </tr>`;
@@ -2165,48 +2189,46 @@ function renderStatsView(){
           <th>Week</th><th class="stats-bar-cell"></th>
           <th style="text-align:right;color:#60a5fa">📞 Calls</th>
           <th style="text-align:right;color:#c084fc">📅 Appts</th>
+          <th style="text-align:right;color:#c084fc;opacity:.7">Appt%</th>
           <th style="text-align:right;color:#fbbf24">🤝 Met</th>
           <th style="text-align:right;color:#4ade80">✅ Conv.</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="margin-top:16px;font-size:10px;color:var(--dim);line-height:1.6">
-        📞 Calls = prospects called this week (by last call date) &nbsp;·&nbsp;
-        📅 Appts = appointments that fall in this week &nbsp;·&nbsp;
-        🤝 Met / ✅ Converted = tracked from today onwards
+        Appt% = appointments ÷ calls &nbsp;·&nbsp; 🤝 Met / ✅ Converted tracked from today onwards
       </div>`;
   } else {
-    // Month view — last 12 months
+    // Month view — only months from earliest data onwards
     const months=[];
-    for(let i=0;i<12;i++){
+    for(let i=0;i<=maxBack;i++){
       const d=new Date(now.getFullYear(),now.getMonth()-i,1);
       const mS=d.toISOString().slice(0,10);
       const mE=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10);
-      months.push({year:d.getFullYear(),month:d.getMonth(),label:d.toLocaleDateString('en-SG',{month:'long',year:'numeric'}),start:mS,end:mE});
+      months.push({label:d.toLocaleDateString('en-SG',{month:'long',year:'numeric'}),start:mS,end:mE,isCurrent:i===0});
     }
-    const rows=months.map((m,i)=>{
+    const rows=months.map(m=>{
       const s=_statsRange(m.start,m.end);
-      const isCurrent=i===0;
-      const numSpan=(n,color)=>`<span class="stats-month-stat"><span class="stats-month-stat-num" style="color:${color};${n===0?'opacity:.35':''}">${n||'—'}</span> <span style="color:var(--dim)">${n===0?'':`${n===1?'':''}`}</span></span>`;
+      const apptPct=pct(s.appts,s.called);
       return`<div class="stats-month-row">
         <div class="stats-month-hdr">
-          <div class="stats-month-name" style="${isCurrent?'color:var(--gold)':''}">${m.label}${isCurrent?' <span style="font-size:9px;font-weight:700">← now</span>':''}</div>
+          <div class="stats-month-name" style="${m.isCurrent?'color:var(--gold)':''}">${m.label}${m.isCurrent?' <span style="font-size:9px;font-weight:700;color:var(--gold)">← now</span>':''}</div>
           <div class="stats-month-stats">
-            <span class="stats-month-stat"><span style="color:#60a5fa;font-size:11px">📞</span> <span class="stats-month-stat-num" style="color:#60a5fa;${s.called===0?'opacity:.35':''}">${s.called||'—'}</span> <span style="color:var(--dim);font-size:10px">calls</span></span>
-            <span class="stats-month-stat"><span style="color:#c084fc;font-size:11px">📅</span> <span class="stats-month-stat-num" style="color:#c084fc;${s.appts===0?'opacity:.35':''}">${s.appts||'—'}</span> <span style="color:var(--dim);font-size:10px">appts</span></span>
-            <span class="stats-month-stat"><span style="color:#fbbf24;font-size:11px">🤝</span> <span class="stats-month-stat-num" style="color:#fbbf24;${s.met===0?'opacity:.35':''}">${s.met||'—'}</span> <span style="color:var(--dim);font-size:10px">met</span></span>
-            <span class="stats-month-stat"><span style="color:#4ade80;font-size:11px">✅</span> <span class="stats-month-stat-num" style="color:#4ade80;${s.converted===0?'opacity:.35':''}">${s.converted||'—'}</span> <span style="color:var(--dim);font-size:10px">converted</span></span>
+            <span class="stats-month-stat"><span style="color:#60a5fa;font-size:11px">📞</span>&nbsp;<span class="stats-month-stat-num" style="color:#60a5fa;${s.called===0?'opacity:.3':''}">${s.called||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">calls</span></span>
+            <span class="stats-month-stat"><span style="color:#c084fc;font-size:11px">📅</span>&nbsp;<span class="stats-month-stat-num" style="color:#c084fc;${s.appts===0?'opacity:.3':''}">${s.appts||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">appts</span>&nbsp;<span style="color:#c084fc;font-size:10px;opacity:.7">(${s.called?apptPct:'—'})</span></span>
+            <span class="stats-month-stat"><span style="color:#fbbf24;font-size:11px">🤝</span>&nbsp;<span class="stats-month-stat-num" style="color:#fbbf24;${s.met===0?'opacity:.3':''}">${s.met||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">met</span></span>
+            <span class="stats-month-stat"><span style="color:#4ade80;font-size:11px">✅</span>&nbsp;<span class="stats-month-stat-num" style="color:#4ade80;${s.converted===0?'opacity:.3':''}">${s.converted||'—'}</span>&nbsp;<span style="color:var(--dim);font-size:10px">converted</span></span>
           </div>
         </div>
       </div>`;
     }).join('');
     el.innerHTML=navHtml+`<div style="display:flex;flex-direction:column;gap:6px">${rows}</div>
-      <div style="margin-top:16px;font-size:10px;color:var(--dim)">🤝 Met &amp; ✅ Converted tracked from today onwards · switch to Week View for monthly detail</div>`;
+      <div style="margin-top:16px;font-size:10px;color:var(--dim)">Appt% = appts ÷ calls &nbsp;·&nbsp; 🤝 Met &amp; ✅ Converted tracked from today onwards</div>`;
   }
 }
 
 window._statsSetMode=mode=>{_statsMode=mode;_statsMonthOffset=0;renderStatsView();};
-window._statsNav=dir=>{_statsMonthOffset=Math.min(0,_statsMonthOffset+dir);renderStatsView();};
+window._statsNav=dir=>{_statsMonthOffset=Math.min(0,_statsMonthOffset+dir);renderStatsView()};
 
 function showProspects(batchName=''){
   currentView='prospects';

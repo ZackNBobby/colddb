@@ -2101,13 +2101,26 @@ function showStats(){
 
 function _statsRange(start,end){
   const apptProspects=prospects.filter(p=>p.appointmentDate&&p.appointmentDate>=start&&p.appointmentDate<=end);
+  // For prospects without a stamped date (pre-feature), fall back to best available proxy
+  const contacted=prospects.filter(p=>{
+    const d=p.contactedDate||(p.contacted?p.lastCalledDate:null);
+    return d&&d>=start&&d<=end;
+  }).length;
+  const met=prospects.filter(p=>{
+    const d=p.metDate||(p.met?p.appointmentDate:null);
+    return d&&d>=start&&d<=end;
+  }).length;
+  const converted=prospects.filter(p=>{
+    const d=p.purchasedDate||(p.purchased?p.metDate||(p.met?p.appointmentDate:null)||(p.contacted?p.lastCalledDate:null):null);
+    return d&&d>=start&&d<=end;
+  }).length;
   return{
     called:prospects.filter(p=>p.lastCalledDate&&p.lastCalledDate>=start&&p.lastCalledDate<=end).length,
-    contacted:prospects.filter(p=>p.contactedDate&&p.contactedDate>=start&&p.contactedDate<=end).length,
+    contacted,
     appts:apptProspects.length,
     apptProspects,
-    met:prospects.filter(p=>p.metDate&&p.metDate>=start&&p.metDate<=end).length,
-    converted:prospects.filter(p=>p.purchasedDate&&p.purchasedDate>=start&&p.purchasedDate<=end).length,
+    met,
+    converted,
   };
 }
 

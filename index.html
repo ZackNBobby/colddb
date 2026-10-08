@@ -2335,16 +2335,13 @@ function renderWeekSummary(){
   const sunStr=sun.toISOString().slice(0,10);
   const inWeek=d=>d&&d>=monStr&&d<=sunStr;
   const calledWk=prospects.filter(p=>inWeek(p.lastCalledDate)).length;
-  const apptsWk=prospects.filter(p=>inWeek(p.appointmentDate)).length;
-  const pipeline=prospects.filter(p=>(p.pickedUp||p.contacted||p.meetingSet||p.met)&&!p.purchased).length;
-  const converted=prospects.filter(p=>p.purchased||p.status==='Converted').length;
+  // Appts SET this week = called this week and meeting is booked
+  const apptsSetWk=prospects.filter(p=>inWeek(p.lastCalledDate)&&p.meetingSet).length;
   el.innerHTML=`
     <div class="week-summary-label">This week &nbsp;<span style="font-weight:400;opacity:.6">${weekLabel}</span></div>
     <div class="week-summary">
       <div class="week-stat"><span style="font-size:13px">📞</span><span class="week-stat-num" style="color:#60a5fa">${calledWk}</span><span class="week-stat-label">called this week</span></div>
-      <div class="week-stat"><span style="font-size:13px">📅</span><span class="week-stat-num" style="color:#c084fc">${apptsWk}</span><span class="week-stat-label">appts this week</span></div>
-      <div class="week-stat"><span style="font-size:13px">🔥</span><span class="week-stat-num" style="color:#fb923c">${pipeline}</span><span class="week-stat-label">active pipeline</span></div>
-      <div class="week-stat"><span style="font-size:13px">✅</span><span class="week-stat-num" style="color:#4ade80">${converted}</span><span class="week-stat-label">total converted</span></div>
+      <div class="week-stat"><span style="font-size:13px">📅</span><span class="week-stat-num" style="color:#c084fc">${apptsSetWk}</span><span class="week-stat-label">appts set this week</span></div>
     </div>`;
 }
 

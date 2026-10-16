@@ -714,6 +714,7 @@
       </div>
       <input class="filter-input" id="fPolicies" type="text" placeholder="🔖 Policy…" style="width:130px;display:none"/>
       <span class="filter-count" id="filterCount"></span>
+      <button class="btn btn-ghost" id="btnLegend" style="margin-left:auto" onclick="window._toggleLegend(event)" title="What do Cold/Warm/Hot/Smart/Blur mean?">ℹ️ Legend</button>
     </div>
 
     <div class="statsrow" id="statsRow"></div>
@@ -2434,7 +2435,7 @@ function renderBatchGrid(){
     const typeLine=(smartCount||blurCount)?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <span style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-right:2px">Type</span>
       ${smartCount?`<button class="btype-btn smart" onclick="event.stopPropagation();window._viewBatchType('${esc(b.name)}','smart')" title="View all Smart prospects in this batch">🧠 Smart ${smartCount}</button>`:''}
-      ${blurCount?`<button class="btype-btn blur" onclick="event.stopPropagation();window._viewBatchType('${esc(b.name)}','blur')" title="View all Blur prospects in this batch">🔥 Blur ${blurCount}</button>`:''}
+      ${blurCount?`<button class="btype-btn blur" onclick="event.stopPropagation();window._viewBatchType('${esc(b.name)}','blur')" title="View all Blur prospects in this batch">🌫️ Blur ${blurCount}</button>`:''}
     </div>`:'';
     // Appointment ping
     const t=today();
@@ -2713,7 +2714,7 @@ function renderStats(){
   const chipN={'New':filtered.filter(p=>p.status==='New').length,'Called':fc.called,'Contacted':fc.contacted,'Meeting Set':fc.apptSet,'Met':fc.met,'Converted':fc.converted,'Cold':fc.cold,'Cancelled':fc.cancelled};
   const activeStatus=document.getElementById('fStatus')?.value||'';
   const typeColor=prospectTypeFilter==='smart'?'#818cf8':prospectTypeFilter==='blur'?'#fb923c':'';
-  const typeIcon=prospectTypeFilter==='smart'?'🧠 Smart':prospectTypeFilter==='blur'?'🔥 Blur':'';
+  const typeIcon=prospectTypeFilter==='smart'?'🧠 Smart':prospectTypeFilter==='blur'?'🌫️ Blur':'';
   const typeChip=prospectTypeFilter?`<div class="stat-chip active" style="border-color:${typeColor};background:${typeColor}1a;cursor:pointer" onclick="window._clearTypeFilter()" title="Clear type filter"><span class="num" style="color:${typeColor}">${typeIcon}</span>&nbsp;<span style="color:${typeColor}aa;font-size:10px">only &nbsp;✕</span></div>`:'';
   let html=`${typeChip}<div class="stat-chip" style="border-color:rgba(255,255,255,.1)"><span class="num" style="color:var(--muted)">${filtered.length}</span>&nbsp;<span style="color:var(--dim)">Total</span></div>`;
   STATUSES.forEach(s=>{
@@ -2734,6 +2735,31 @@ window._viewBatchType=(name,type)=>{
   renderAll();              // re-render with type filter active
 };
 window._clearTypeFilter=()=>{prospectTypeFilter='';renderAll();};
+
+// Quick-reference legend for the Interest Level (Hot/Warm/Cold) and
+// Prospect Type (Smart/Blur) badges — toggled from the filter bar.
+window._toggleLegend=(e)=>{
+  e.stopPropagation();
+  const existing=document.getElementById('legendPopover');
+  if(existing){existing.remove();return;}
+  const btn=document.getElementById('btnLegend');
+  const rect=btn.getBoundingClientRect();
+  const pop=document.createElement('div');
+  pop.id='legendPopover';
+  pop.style.cssText=`position:fixed;top:${rect.bottom+8}px;right:${Math.max(8,window.innerWidth-rect.right)}px;z-index:9000;background:rgba(6,13,24,.98);border:1px solid rgba(240,165,0,.2);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.7);backdrop-filter:blur(24px);min-width:250px;max-width:300px;animation:pickerIn .15s cubic-bezier(.34,1.4,.64,1) both;`;
+  const row=(icon,label,color,desc)=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px"><span style="font-size:14px;flex-shrink:0">${icon}</span><div><b style="color:${color};font-size:12px">${label}</b><div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:1px">${desc}</div></div></div>`;
+  pop.innerHTML=`
+    <div style="font-size:10px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px">Interest Level <span style="font-weight:400;text-transform:none;opacity:.7">— set after Met</span></div>
+    ${row('🔥','Hot','#f87171','Ready to buy — follow up fast, don\'t let it go cold')}
+    ${row('😊','Warm','#fbbf24','Interested, needs more nurturing before they commit')}
+    ${row('❄️','Cold','#60a5fa','Lukewarm — low urgency, long game, low priority follow-up')}
+    <div style="font-size:10px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 9px">Prospect Type</div>
+    ${row('🧠','Smart','#818cf8','Analytical — give them data, value and multiple follow-ups')}
+    ${row('🌫️','Blur','#fb923c','Emotion-driven — build rapport, sell the feeling, apply gentle push')}
+  `;
+  document.body.appendChild(pop);
+  setTimeout(()=>document.addEventListener('click',function h(ev){if(!pop.contains(ev.target)){pop.remove();document.removeEventListener('click',h);}},{once:true}),0);
+};
 window._togglePolicyFilter=()=>{
   const el=document.getElementById('fPolicies');if(!el)return;
   const visible=el.style.display!=='none';
@@ -2778,7 +2804,7 @@ function renderList(){
         ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
         <div class="type-btns" style="display:${p.met?'flex':'none'}">
           <span class="type-pill ${p.prospectType==='smart'?'smart':'smart-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','smart')">🧠 Smart</span>
-          <span class="type-pill ${p.prospectType==='blur'?'blur':'blur-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','blur')">🔥 Blur</span>
+          <span class="type-pill ${p.prospectType==='blur'?'blur':'blur-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','blur')">🌫️ Blur</span>
           ${p.interestLevel?`<span class="type-pill" style="${p.interestLevel==='hot'?'color:#f87171;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.1)':p.interestLevel==='warm'?'color:#fbbf24;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.1)':'color:#60a5fa;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.1)'}">${p.interestLevel==='hot'?'🔥 Hot':p.interestLevel==='warm'?'😊 Warm':'❄️ Cold'}</span>`:''}
         </div>
       </td>
@@ -2894,8 +2920,8 @@ function _metCaptureModal(id){
   const p=prospects.find(x=>x.id===id);if(!p)return;
   const name=p.preferredName||p.name||'prospect';
   const existing=document.getElementById('metCaptureModal');if(existing)existing.remove();
-  const ov=document.createElement('div');ov.id='metCaptureModal';ov.className='modal-overlay';
-  ov.innerHTML=`<div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+  const ov=document.createElement('div');ov.id='metCaptureModal';ov.className='modal-bg';
+  ov.innerHTML=`<div class="modal" style="max-width:580px" onclick="event.stopPropagation()">
     <h2 style="margin-bottom:4px">✅ Met ${esc(name)}</h2>
     <div style="font-size:11px;color:var(--dim);margin-bottom:18px">Quick capture — takes 10 seconds</div>
     <div style="margin-bottom:16px">
@@ -2908,7 +2934,7 @@ function _metCaptureModal(id){
     </div>
     <div style="margin-bottom:18px">
       <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Quick Note <span style="font-weight:400;opacity:.6">(optional)</span></div>
-      <textarea id="metCaptureNote" placeholder="e.g. Interested in critical illness, follow up next week…" style="width:100%;box-sizing:border-box;height:80px;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:10px;color:var(--text);font-size:13px;padding:10px 12px;resize:none;font-family:'Inter',sans-serif;line-height:1.6;outline:none" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--gold-border)'"></textarea>
+      <textarea id="metCaptureNote" placeholder="e.g. Interested in critical illness, follow up next week…" style="width:100%;box-sizing:border-box;height:180px;background:rgba(10,20,36,.8);border:1px solid var(--gold-border);border-radius:10px;color:var(--text);font-size:14px;padding:12px 14px;resize:vertical;font-family:'Inter',sans-serif;line-height:1.7;outline:none" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--gold-border)'"></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="window._saveMetCapture('${id}')">Save</button>
@@ -3064,7 +3090,7 @@ function renderDetailContent(p){
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="ptype-btn ${p.prospectType==='smart'?'smart-on':'smart-off'}" onclick="window._setProspectType('${p.id}','smart')" title="Analytical prospect — needs value insights, detailed follow-ups and better offers before committing">🧠 Smart</button>
-        <button class="ptype-btn ${p.prospectType==='blur'?'blur-on':'blur-off'}" onclick="window._setProspectType('${p.id}','blur')" title="Emotion-driven prospect — build rapport, sell the pain, apply gentle pressure to get them to commit">🔥 Blur</button>
+        <button class="ptype-btn ${p.prospectType==='blur'?'blur-on':'blur-off'}" onclick="window._setProspectType('${p.id}','blur')" title="Emotion-driven prospect — build rapport, sell the pain, apply gentle pressure to get them to commit">🌫️ Blur</button>
         ${p.interestLevel?`<span style="margin-left:4px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;${p.interestLevel==='hot'?'color:#f87171;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)':p.interestLevel==='warm'?'color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3)':'color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3)'}">${p.interestLevel==='hot'?'🔥 Hot':p.interestLevel==='warm'?'😊 Warm':'❄️ Cold'}</span>`:''}
       </div>
     </div>
@@ -3550,6 +3576,7 @@ document.addEventListener('keydown',e=>{
     if(document.getElementById('statusPicker')){document.getElementById('statusPicker').remove();return;}
     if(document.getElementById('fuDatePicker')){document.getElementById('fuDatePicker').remove();return;}
     if(document.getElementById('batchDatePicker')){document.getElementById('batchDatePicker').remove();return;}
+    if(document.getElementById('legendPopover')){document.getElementById('legendPopover').remove();return;}
     if(selectedId){closeDetail();return;}
     if(currentView==='prospects'){showDashboard();return;}
     return;

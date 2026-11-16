@@ -497,7 +497,7 @@
     .nav-tab:hover{color:var(--text);background:rgba(255,255,255,.05);}
     .nav-tab.active{color:var(--gold);background:var(--gold-glow);border-color:var(--gold-border);}
     /* Sales view */
-    #salesView{flex:1;overflow-y:auto;padding:16px 20px;display:none;}
+    #salesView{flex:1;overflow-y:auto;padding:16px 20px;display:none;--cl-fs:13px;}
     #salesView::-webkit-scrollbar{width:5px;}
     #salesView::-webkit-scrollbar-thumb{background:rgba(240,165,0,.15);border-radius:3px;}
     #statsView::-webkit-scrollbar{width:5px;}
@@ -591,12 +591,14 @@
     .cl-batch-name{font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.07em;}
     .cl-batch-stats{font-size:10px;color:var(--dim);text-align:right;}
     .cl-client-block{border:1px solid rgba(255,255,255,.07);border-radius:0;margin-bottom:1px;overflow:hidden;}
-    .cl-row{display:grid;grid-template-columns:150px 1fr 90px 104px 104px 52px;align-items:center;padding:5px 12px;gap:8px;font-size:13px;}
+    .cl-row{display:grid;grid-template-columns:140px minmax(130px,200px) 80px 88px 92px 48px;align-items:center;padding:5px 12px;gap:8px;font-size:var(--cl-fs,13px);}
     .cl-row:hover{background:rgba(240,165,0,.04);}
-    .cl-client-hdr{display:grid;grid-template-columns:150px 1fr 90px 104px 104px 52px;align-items:center;padding:5px 12px;gap:8px;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.06);}
-    .cl-policy-row{display:grid;grid-template-columns:16px 1fr 90px 104px 104px 52px;align-items:center;padding:3px 12px;border-top:1px solid rgba(255,255,255,.04);gap:8px;font-size:12px;}
+    .cl-client-hdr{display:grid;grid-template-columns:140px minmax(130px,200px) 80px 88px 92px 48px;align-items:center;padding:5px 12px;gap:8px;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.06);}
+    .cl-policy-row{display:grid;grid-template-columns:16px minmax(130px,200px) 80px 88px 92px 48px;align-items:center;padding:3px 12px;border-top:1px solid rgba(255,255,255,.04);gap:8px;font-size:calc(var(--cl-fs,13px) - 1px);}
     .cl-policy-row:hover{background:rgba(255,255,255,.02);}
-    .cl-col-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:3px 12px;display:grid;grid-template-columns:150px 1fr 90px 104px 104px 52px;gap:8px;background:rgba(255,255,255,.015);}
+    .cl-col-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:3px 12px;display:grid;grid-template-columns:140px minmax(130px,200px) 80px 88px 92px 48px;gap:8px;background:rgba(255,255,255,.015);}
+    @keyframes yearGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,165,0,0);}50%{box-shadow:0 0 0 5px rgba(240,165,0,.22);}}
+    .yr-active{animation:yearGlow 2s ease-in-out infinite;}
     @media(max-width:620px){
       #salesView{padding:10px 8px;}
       .cl-row,.cl-client-hdr,.cl-col-label{grid-template-columns:1fr 68px 68px 40px;}
@@ -767,12 +769,18 @@
 
   <!-- SALES VIEW -->
   <div id="salesView">
-    <div style="max-width:1200px;margin:0 auto;">
+    <div style="max-width:900px;margin:0 auto;">
       <div class="dash-section-title" style="margin-bottom:20px">Sales Overview</div>
       <div class="sales-hero" id="salesHero"></div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div id="salesYearBar" style="display:flex;gap:6px;"></div>
         <div class="dash-section-title" style="margin:0">Closing Log</div>
-        <div id="salesYearBar" style="display:flex;gap:6px;margin-left:auto"></div>
+        <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+          <span style="font-size:10px;color:var(--dim);margin-right:2px">Text</span>
+          <button onclick="window._clFontAdj(-1)" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:5px;color:var(--dim);width:22px;height:22px;font-size:13px;cursor:pointer;line-height:1;padding:0">−</button>
+          <span id="clFontSizeLabel" style="font-size:11px;color:var(--dim);min-width:28px;text-align:center"></span>
+          <button onclick="window._clFontAdj(1)" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:5px;color:var(--dim);width:22px;height:22px;font-size:13px;cursor:pointer;line-height:1;padding:0">+</button>
+        </div>
       </div>
       <div id="closingsContainer"></div>
       <div id="closingsEmpty" style="display:none;padding:40px;text-align:center;color:var(--dim);font-size:13px">No closings logged yet. Hit <strong>+ Log Closing</strong> to record your first deal.</div>
@@ -803,6 +811,7 @@ let prospects=[];
 let batches=[];
 let closings=[];
 let _salesYear=2026;
+let _clFontSize=+(localStorage.getItem('cl_fs')||13);
 let selectedId=null;
 let pendingImport=[];
 let currentView='dashboard';
@@ -1016,7 +1025,9 @@ function fmtK(n){const v=Number(n||0);return v>=1000?'S$'+(v/1000).toFixed(1)+'k
 
 function renderSales(){
   const yb=document.getElementById('salesYearBar');
-  if(yb)yb.innerHTML=[2026,2027].map(y=>`<button onclick="window._setSalesYear(${y})" style="padding:3px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${_salesYear===y?'background:rgba(240,165,0,.15);border-color:var(--gold);color:var(--gold)':'background:rgba(255,255,255,.03);border-color:var(--border);color:var(--dim)'}">${y}</button>`).join('');
+  if(yb)yb.innerHTML=[2026,2027].map(y=>`<button onclick="window._setSalesYear(${y})" class="${_salesYear===y?'yr-active':''}" style="padding:3px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${_salesYear===y?'background:rgba(240,165,0,.15);border-color:var(--gold);color:var(--gold)':'background:rgba(255,255,255,.03);border-color:var(--border);color:var(--dim)'}">${y}</button>`).join('');
+  document.getElementById('salesView')?.style.setProperty('--cl-fs',_clFontSize+'px');
+  const lbl=document.getElementById('clFontSizeLabel');if(lbl)lbl.textContent=_clFontSize+'px';
 
   const ekkoProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type==='ekko';});
   const axsProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type==='axs';});
@@ -1205,6 +1216,11 @@ function renderSales(){
 }
 
 window._setSalesYear=y=>{_salesYear=y;renderSales();};
+window._clFontAdj=delta=>{
+  _clFontSize=Math.min(18,Math.max(10,_clFontSize+delta));
+  localStorage.setItem('cl_fs',_clFontSize);
+  renderSales();
+};
 
 function closingModal(existing=null){
   const isEdit=!!existing;

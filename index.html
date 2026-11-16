@@ -1123,8 +1123,8 @@ function renderSales(){
       const batchComm=allE.reduce((s,c)=>s+(Number(c.commission)||0),0);
       const btype=allE[0]?.batchType;
       const srcTag=btype?`<span class="${typeTagClass(btype,'-sm')}" style="margin-left:8px">${typeLabel(btype).toUpperCase()}</span>`:'';
-      h+=`<div class="cl-section" style="border-top:none;border-radius:0">
-        <div class="cl-batch-hdr" style="border-radius:0">
+      h+=`<div class="cl-section" style="margin-bottom:0;border-top:none;border-radius:0">
+        <div class="cl-batch-hdr" style="border-radius:0;margin-bottom:0">
           <span class="cl-batch-name">${esc(batchName)}${srcTag}</span>
           <span class="cl-batch-stats">${Object.keys(clients).length} client${Object.keys(clients).length!==1?'s':''} · ${allE.length} closing${allE.length!==1?'s':''}<br/><span style="color:#60a5fa;font-weight:700">${fmt(batchAPE)} APE</span> · <span style="color:#4ade80;font-weight:700">${fmt(batchComm)} comm</span></span>
         </div>
@@ -1183,13 +1183,13 @@ function renderSales(){
     const hasC=qC.length>0;
     const qAPE=qC.reduce((s,c)=>s+(Number(c.ape)||0),0);
     const qComm=qC.reduce((s,c)=>s+(Number(c.commission)||0),0);
-    html+=`<div style="margin-bottom:20px">
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(240,165,0,.07);border:1px solid rgba(240,165,0,.18);border-radius:${hasC?'10px 10px 0 0':'10px'}">
-        <span style="font-size:15px;font-weight:900;color:var(--gold);min-width:28px">${label}</span>
-        <span style="font-size:12px;color:var(--dim)">${months}</span>
+    html+=`<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(30,64,175,.18);border:1px solid rgba(96,165,250,.3);border-radius:${hasC?'10px 10px 0 0':'10px'}">
+        <span style="font-size:15px;font-weight:900;color:#93c5fd;min-width:28px">${label}</span>
+        <span style="font-size:12px;color:#93c5fd;opacity:.7">${months}</span>
         ${hasC
-          ?`<span style="display:flex;align-items:center;gap:8px;margin-left:auto"><span style="font-size:11px;color:var(--dim)">${qC.length} closing${qC.length!==1?'s':''}</span><span style="font-size:12px;font-weight:700;color:#60a5fa">${fmt(qAPE)} APE</span><span style="font-size:12px;font-weight:700;color:#4ade80">${fmt(qComm)} comm</span></span>`
-          :`<span style="margin-left:auto;font-size:11px;color:var(--muted);font-style:italic">No closings</span>`}
+          ?`<span style="display:flex;align-items:center;gap:8px;margin-left:auto"><span style="font-size:11px;color:#93c5fd;opacity:.7">${qC.length} closing${qC.length!==1?'s':''}</span><span style="font-size:12px;font-weight:700;color:#60a5fa">${fmt(qAPE)} APE</span><span style="font-size:12px;font-weight:700;color:#4ade80">${fmt(qComm)} comm</span></span>`
+          :`<span style="margin-left:auto;font-size:11px;color:#93c5fd;opacity:.5;font-style:italic">No closings</span>`}
       </div>
       ${batchBlock(qC)}
     </div>`;

@@ -763,7 +763,10 @@
     <div style="max-width:1200px;margin:0 auto;">
       <div class="dash-section-title" style="margin-bottom:20px">Sales Overview</div>
       <div class="sales-hero" id="salesHero"></div>
-      <div class="dash-section-title" style="margin-bottom:12px">Closing Log</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="dash-section-title" style="margin:0">Closing Log</div>
+        <div id="salesYearBar" style="display:flex;gap:6px;margin-left:auto"></div>
+      </div>
       <div id="closingsContainer"></div>
       <div id="closingsEmpty" style="display:none;padding:40px;text-align:center;color:var(--dim);font-size:13px">No closings logged yet. Hit <strong>+ Log Closing</strong> to record your first deal.</div>
     </div>
@@ -792,6 +795,7 @@ const auth=getAuth(fbApp);
 let prospects=[];
 let batches=[];
 let closings=[];
+let _salesYear=2026;
 let selectedId=null;
 let pendingImport=[];
 let currentView='dashboard';
@@ -1004,6 +1008,9 @@ function fmt(n){return'S$'+Number(n||0).toLocaleString('en-SG',{minimumFractionD
 function fmtK(n){const v=Number(n||0);return v>=1000?'S$'+(v/1000).toFixed(1)+'k':fmt(v);}
 
 function renderSales(){
+  const yb=document.getElementById('salesYearBar');
+  if(yb)yb.innerHTML=[2026,2027].map(y=>`<button onclick="window._setSalesYear(${y})" style="padding:3px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${_salesYear===y?'background:rgba(240,165,0,.15);border-color:var(--gold);color:var(--gold)':'background:rgba(255,255,255,.03);border-color:var(--border);color:var(--dim)'}">${y}</button>`).join('');
+
   const ekkoProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type==='ekko';});
   const axsProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type==='axs';});
   const otherProspects=prospects.filter(p=>{const b=batches.find(x=>x.name===p.batch);return b&&b.type!=='ekko'&&b.type!=='axs';});
@@ -1089,87 +1096,108 @@ function renderSales(){
   if(!closings.length){container.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
 
-  // Group by batch → client (case-insensitive name match)
-  const byBatch={};
-  closings.forEach(c=>{
-    const batch=c.batchName||'Unknown Batch';
-    if(!byBatch[batch])byBatch[batch]={};
-    const key=(c.name||'—').trim().toLowerCase();
-    if(!byBatch[batch][key])byBatch[batch][key]={displayName:c.name||'—',entries:[]};
-    byBatch[batch][key].entries.push(c);
-  });
-  // Sort batches by natural name order
-  const sortedBatches=Object.keys(byBatch).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+  const yearC=closings.filter(c=>(c.closedDate||'').startsWith(String(_salesYear)));
+  function qOf(ds){if(!ds)return 0;const m=+(ds.slice(5,7));return m<=3?1:m<=6?2:m<=9?3:4;}
+  const QTRS=[{q:1,label:'Q1',months:'Jan – Mar'},{q:2,label:'Q2',months:'Apr – Jun'},{q:3,label:'Q3',months:'Jul – Sep'},{q:4,label:'Q4',months:'Oct – Dec'}];
 
   function riderBadge(c){return c.riders?.length?`<span class="rider-badge">+${c.riders.length}r</span>`:''}
   function actions(c){return`<span class="closing-action" onclick="window._editClosing('${c.id}')" title="Edit">✎</span><span class="closing-action del" onclick="window._deleteClosing('${c.id}')" title="Delete">✕</span>`;}
   function prodCell(c){return`<span style="color:var(--text)">${esc(c.product||'—')}</span>${riderBadge(c)}<span style="color:var(--dim);font-size:10px;margin-left:4px">${esc(c.term||'')}</span>`;}
 
-  let html='';
-  sortedBatches.forEach(batchName=>{
-    const clients=byBatch[batchName];
-    const allE=Object.values(clients).flatMap(g=>g.entries);
-    const batchAPE=allE.reduce((s,c)=>s+(Number(c.ape)||0),0);
-    const batchComm=allE.reduce((s,c)=>s+(Number(c.commission)||0),0);
-    const btype=allE[0]?.batchType;
-    const srcTag=btype?`<span class="${typeTagClass(btype,'-sm')}" style="margin-left:8px">${typeLabel(btype).toUpperCase()}</span>`:'';
-
-    html+=`<div class="cl-section">
-      <div class="cl-batch-hdr">
-        <span class="cl-batch-name">${esc(batchName)}${srcTag}</span>
-        <span class="cl-batch-stats">${Object.keys(clients).length} client${Object.keys(clients).length!==1?'s':''} · ${allE.length} closing${allE.length!==1?'s':''}<br/><span style="color:#60a5fa;font-weight:700">${fmt(batchAPE)} APE</span> · <span style="color:#4ade80;font-weight:700">${fmt(batchComm)} comm</span></span>
-      </div>
-      <div class="cl-col-label"><span>Client</span><span>Product · Term</span><span>Date</span><span>APE</span><span>Commission</span><span></span></div>`;
-
-    // Sort clients by most recent closing date
-    const sortedClients=Object.values(clients).sort((a,b)=>{
-      const dA=a.entries.map(e=>e.closedDate||'').sort().reverse()[0]||'';
-      const dB=b.entries.map(e=>e.closedDate||'').sort().reverse()[0]||'';
-      return dB.localeCompare(dA);
+  function batchBlock(qClosings){
+    if(!qClosings.length)return'';
+    const byBatch={};
+    qClosings.forEach(c=>{
+      const batch=c.batchName||'Unknown Batch';
+      if(!byBatch[batch])byBatch[batch]={};
+      const key=(c.name||'—').trim().toLowerCase();
+      if(!byBatch[batch][key])byBatch[batch][key]={displayName:c.name||'—',entries:[]};
+      byBatch[batch][key].entries.push(c);
     });
-
-    sortedClients.forEach(({displayName,entries})=>{
-      entries.sort((a,b)=>(b.closedDate||'').localeCompare(a.closedDate||''));
-      const multi=entries.length>1;
-      const totalAPE=entries.reduce((s,c)=>s+(Number(c.ape)||0),0);
-      const totalComm=entries.reduce((s,c)=>s+(Number(c.commission)||0),0);
-      html+=`<div class="cl-client-block">`;
-      if(multi){
-        html+=`<div class="cl-client-hdr">
-          <div style="font-weight:700">${esc(displayName)}</div>
-          <div style="font-size:11px;color:var(--dim)">${entries.length} products</div>
-          <div style="font-size:11px;color:var(--dim)">${entries[entries.length-1].closedDate||''} – ${entries[0].closedDate||''}</div>
-          <div style="font-weight:700;color:#60a5fa">${fmt(totalAPE)}</div>
-          <div style="font-weight:700;color:#4ade80">${fmt(totalComm)}</div>
-          <div></div>
-        </div>`;
-        entries.forEach(c=>{
-          html+=`<div class="cl-policy-row">
-            <div style="color:var(--dim)">↳</div>
-            <div>${prodCell(c)}${c.notes?`<span style="color:var(--dim);font-size:10px;margin-left:6px" title="${esc(c.notes)}">📝</span>`:''}</div>
+    const sortedBatches=Object.keys(byBatch).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+    let h='';
+    sortedBatches.forEach(batchName=>{
+      const clients=byBatch[batchName];
+      const allE=Object.values(clients).flatMap(g=>g.entries);
+      const batchAPE=allE.reduce((s,c)=>s+(Number(c.ape)||0),0);
+      const batchComm=allE.reduce((s,c)=>s+(Number(c.commission)||0),0);
+      const btype=allE[0]?.batchType;
+      const srcTag=btype?`<span class="${typeTagClass(btype,'-sm')}" style="margin-left:8px">${typeLabel(btype).toUpperCase()}</span>`:'';
+      h+=`<div class="cl-section" style="border-top:none;border-radius:0">
+        <div class="cl-batch-hdr" style="border-radius:0">
+          <span class="cl-batch-name">${esc(batchName)}${srcTag}</span>
+          <span class="cl-batch-stats">${Object.keys(clients).length} client${Object.keys(clients).length!==1?'s':''} · ${allE.length} closing${allE.length!==1?'s':''}<br/><span style="color:#60a5fa;font-weight:700">${fmt(batchAPE)} APE</span> · <span style="color:#4ade80;font-weight:700">${fmt(batchComm)} comm</span></span>
+        </div>
+        <div class="cl-col-label"><span>Client</span><span>Product · Term</span><span>Date</span><span>APE</span><span>Commission</span><span></span></div>`;
+      const sortedClients=Object.values(clients).sort((a,b)=>{
+        const dA=a.entries.map(e=>e.closedDate||'').sort().reverse()[0]||'';
+        const dB=b.entries.map(e=>e.closedDate||'').sort().reverse()[0]||'';
+        return dB.localeCompare(dA);
+      });
+      sortedClients.forEach(({displayName,entries})=>{
+        entries.sort((a,b)=>(b.closedDate||'').localeCompare(a.closedDate||''));
+        const multi=entries.length>1;
+        const totalAPE=entries.reduce((s,c)=>s+(Number(c.ape)||0),0);
+        const totalComm=entries.reduce((s,c)=>s+(Number(c.commission)||0),0);
+        h+=`<div class="cl-client-block">`;
+        if(multi){
+          h+=`<div class="cl-client-hdr">
+            <div style="font-weight:700">${esc(displayName)}</div>
+            <div style="font-size:11px;color:var(--dim)">${entries.length} products</div>
+            <div style="font-size:11px;color:var(--dim)">${entries[entries.length-1].closedDate||''} – ${entries[0].closedDate||''}</div>
+            <div style="font-weight:700;color:#60a5fa">${fmt(totalAPE)}</div>
+            <div style="font-weight:700;color:#4ade80">${fmt(totalComm)}</div>
+            <div></div>
+          </div>`;
+          entries.forEach(c=>{
+            h+=`<div class="cl-policy-row">
+              <div style="color:var(--dim)">↳</div>
+              <div>${prodCell(c)}${c.notes?`<span style="color:var(--dim);font-size:10px;margin-left:6px" title="${esc(c.notes)}">📝</span>`:''}</div>
+              <div style="color:var(--muted);font-size:11px">${c.closedDate||'—'}</div>
+              <div style="font-weight:600;color:#60a5fa">${fmt(c.ape)}</div>
+              <div style="font-weight:600;color:#4ade80">${fmt(c.commission)}</div>
+              <div style="white-space:nowrap">${actions(c)}</div>
+            </div>`;
+          });
+        }else{
+          const c=entries[0];
+          h+=`<div class="cl-row">
+            <div style="font-weight:700">${esc(displayName)}</div>
+            <div style="font-size:11px">${prodCell(c)}${c.notes?`<span style="color:var(--dim);font-size:10px;margin-left:6px" title="${esc(c.notes)}">📝</span>`:''}</div>
             <div style="color:var(--muted);font-size:11px">${c.closedDate||'—'}</div>
-            <div style="font-weight:600;color:#60a5fa">${fmt(c.ape)}</div>
-            <div style="font-weight:600;color:#4ade80">${fmt(c.commission)}</div>
+            <div style="font-weight:700;color:#60a5fa">${fmt(c.ape)}</div>
+            <div style="font-weight:700;color:#4ade80">${fmt(c.commission)}</div>
             <div style="white-space:nowrap">${actions(c)}</div>
           </div>`;
-        });
-      }else{
-        const c=entries[0];
-        html+=`<div class="cl-row">
-          <div style="font-weight:700">${esc(displayName)}</div>
-          <div style="font-size:11px">${prodCell(c)}${c.notes?`<span style="color:var(--dim);font-size:10px;margin-left:6px" title="${esc(c.notes)}">📝</span>`:''}</div>
-          <div style="color:var(--muted);font-size:11px">${c.closedDate||'—'}</div>
-          <div style="font-weight:700;color:#60a5fa">${fmt(c.ape)}</div>
-          <div style="font-weight:700;color:#4ade80">${fmt(c.commission)}</div>
-          <div style="white-space:nowrap">${actions(c)}</div>
-        </div>`;
-      }
-      html+=`</div>`;
+        }
+        h+=`</div>`;
+      });
+      h+=`</div>`;
     });
-    html+=`</div>`;
+    return h;
+  }
+
+  let html='';
+  QTRS.forEach(({q,label,months})=>{
+    const qC=yearC.filter(c=>qOf(c.closedDate)===q);
+    const hasC=qC.length>0;
+    const qAPE=qC.reduce((s,c)=>s+(Number(c.ape)||0),0);
+    const qComm=qC.reduce((s,c)=>s+(Number(c.commission)||0),0);
+    html+=`<div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(240,165,0,.07);border:1px solid rgba(240,165,0,.18);border-radius:${hasC?'10px 10px 0 0':'10px'}">
+        <span style="font-size:15px;font-weight:900;color:var(--gold);min-width:28px">${label}</span>
+        <span style="font-size:12px;color:var(--dim)">${months}</span>
+        ${hasC
+          ?`<span style="display:flex;align-items:center;gap:8px;margin-left:auto"><span style="font-size:11px;color:var(--dim)">${qC.length} closing${qC.length!==1?'s':''}</span><span style="font-size:12px;font-weight:700;color:#60a5fa">${fmt(qAPE)} APE</span><span style="font-size:12px;font-weight:700;color:#4ade80">${fmt(qComm)} comm</span></span>`
+          :`<span style="margin-left:auto;font-size:11px;color:var(--muted);font-style:italic">No closings</span>`}
+      </div>
+      ${batchBlock(qC)}
+    </div>`;
   });
   container.innerHTML=html;
 }
+
+window._setSalesYear=y=>{_salesYear=y;renderSales();};
 
 function closingModal(existing=null){
   const isEdit=!!existing;

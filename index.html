@@ -602,11 +602,20 @@
     .cl-col-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:3px 12px;display:grid;grid-template-columns:140px minmax(130px,200px) 80px 88px 92px 48px;gap:8px;background:rgba(255,255,255,.015);}
     @keyframes yearGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,165,0,0);}50%{box-shadow:0 0 0 5px rgba(240,165,0,.22);}}
     .yr-active{animation:yearGlow 2s ease-in-out infinite;}
-    @media(max-width:620px){
-      #salesView{padding:10px 8px;}
-      .cl-row,.cl-client-hdr,.cl-col-label{grid-template-columns:1fr 68px 68px 40px;}
-      .cl-policy-row{grid-template-columns:1fr 68px 68px 40px;}
-      .cl-row>:nth-child(3),.cl-client-hdr>:nth-child(3),.cl-col-label>:nth-child(3),.cl-policy-row>:nth-child(3){display:none;}
+    @media(max-width:680px){
+      #salesView{padding:8px 6px;}
+      .sales-hero{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+      .sales-source-card{padding:12px 12px;}
+      .ssc-value{font-size:16px;}
+      .ssc-title{font-size:10px;margin-bottom:8px;}
+      .cl-row,.cl-client-hdr,.cl-policy-row,.cl-col-label{
+        grid-template-columns:1fr 72px 80px 36px;
+        gap:5px;padding:5px 8px;
+      }
+      .cl-row>:nth-child(2),.cl-client-hdr>:nth-child(2),.cl-policy-row>:nth-child(2),.cl-col-label>:nth-child(2),
+      .cl-row>:nth-child(3),.cl-client-hdr>:nth-child(3),.cl-policy-row>:nth-child(3),.cl-col-label>:nth-child(3){display:none;}
+      .cl-batch-hdr{flex-direction:column;align-items:flex-start;gap:2px;padding:6px 10px;}
+      .cl-batch-stats{text-align:left;font-size:9px;line-height:1.5;}
     }
     .rider-badge{font-size:9px;background:rgba(192,132,252,.15);color:#c084fc;border:1px solid rgba(192,132,252,.25);border-radius:4px;padding:1px 5px;vertical-align:middle;}
   </style>

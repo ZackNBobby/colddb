@@ -751,13 +751,13 @@
             <thead>
               <tr>
                 <th onclick="window._sort('name')">Name</th>
-                <th>Phone</th>
+                <th>Tel</th>
                 <th onclick="window._sort('birthYear')">Age</th>
                 <th id="thBatchCol">Batch</th>
                 <th onclick="window._sort('gender')">G</th>
-                <th onclick="window._togglePolicyFilter()" style="cursor:pointer" title="Click to filter by policy">Policies</th>
-                <th onclick="window._sort('status')">Status</th>
-                <th onclick="window._sort('followUpDate')">Follow-up</th>
+                <th onclick="window._togglePolicyFilter()" style="cursor:pointer" title="Click to filter by policy">P</th>
+                <th onclick="window._sort('status')">Stats</th>
+                <th onclick="window._sort('followUpDate')">FUP</th>
                 <th onclick="window._sort('appointmentDate')">Appt</th>
                 <th title="Called / picked up">📞</th>
                 <th title="Contacted (had a conversation)">💬</th>
@@ -2897,7 +2897,7 @@ function renderList(){
   const tbody=document.getElementById('prospectTbody');
   if(!tbody)return;
   const thBatch=document.getElementById('thBatchCol');
-  if(thBatch)thBatch.textContent=activeBatch?'NRIC':'Batch';
+  if(thBatch)thBatch.textContent=activeBatch?'IC':'Batch';
   if(filtered.length===0){
     tbody.innerHTML='';document.getElementById('emptyState').style.display='block';return;
   }
@@ -2945,7 +2945,10 @@ function renderList(){
       <td style="color:var(--muted)">${calcAge(p.dob||p.birthYear)}</td>
       <td title="${esc(p.batch||'')}">${infoCell(p)}</td>
       <td style="color:${gColor};font-weight:700;font-size:11px">${gNorm||'—'}</td>
-      <td style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(policyText)}">${esc(policyText)}</td>
+      <td title="${esc(policyText)}">
+        <div style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(policyText)}</div>
+        ${activeBatch&&!isAXS&&(p.yearIncepted||p.sumAssured||p.sv)?`<div style="font-size:9px;color:var(--muted);white-space:nowrap;margin-top:1px">${[p.yearIncepted?`${esc(p.yearIncepted)}`:'',p.sumAssured?`SA:${esc(p.sumAssured)}`:'',p.sv?`SV:${esc(p.sv)}`:''].filter(Boolean).join(' · ')}</div>`:''}
+      </td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
         <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>
       </td>

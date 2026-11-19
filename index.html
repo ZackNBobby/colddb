@@ -192,6 +192,7 @@
     .batch-date-btn{font-size:11px;color:var(--dim);margin-top:3px;cursor:pointer;transition:color .15s;display:inline-flex;align-items:center;gap:3px;}
     .batch-date-btn:hover{color:var(--gold);}
     .batch-date-set{color:var(--muted);}
+    .batch-date-expired{color:#f87171!important;}
     #batchDatePicker{position:fixed;z-index:9999;background:rgba(6,13,24,.98);border:1px solid rgba(240,165,0,.2);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.7);min-width:200px;}
     #batchDatePicker input[type=date]{width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(51,65,85,.5);background:rgba(12,24,55,.9);color:#f1f5f9;font-size:13px;font-family:inherit;}
     #batchDatePicker input[type=date]:focus{outline:none;border-color:rgba(240,165,0,.5);}
@@ -1016,6 +1017,43 @@ window._saveBatchDate=async(batchId)=>{
     batch.leadsDate=val;
     renderBatchGrid();
     toast(`Leads date saved: ${fmtLeadsDate(val)} ✓`);
+  }catch(e){toast('Error: '+e.message);}
+};
+
+let _batchExpiryOutsideHandler=null;
+window._pickBatchExpiry=(batchId,el)=>{
+  const existing=document.getElementById('batchExpiryPicker');
+  if(existing){
+    if(_batchExpiryOutsideHandler)document.removeEventListener('click',_batchExpiryOutsideHandler);
+    existing.remove();
+    if(existing.dataset.bid===batchId)return;
+  }
+  const batch=batches.find(b=>b.id===batchId);if(!batch)return;
+  const picker=document.createElement('div');
+  picker.id='batchExpiryPicker';picker.dataset.bid=batchId;
+  picker.style.cssText='position:fixed;z-index:9999;background:rgba(6,13,24,.98);border:1px solid rgba(240,165,0,.2);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.7);min-width:200px;';
+  const rect=el.getBoundingClientRect();
+  picker.style.top=Math.min(rect.bottom+6,window.innerHeight-160)+'px';
+  picker.style.left=Math.max(8,rect.left)+'px';
+  picker.innerHTML=`<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Batch expiry date</div>
+    <input type="date" id="batchExpiryInput" value="${batch.expiryDate||''}" style="color-scheme:dark;width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(51,65,85,.5);background:rgba(12,24,55,.9);color:#f1f5f9;font-size:13px;font-family:inherit;"/>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1;padding:6px" onclick="window._saveBatchExpiry('${batchId}',document.getElementById('batchExpiryInput').value)">Save</button>
+      <button class="btn btn-ghost" style="padding:6px 10px" onclick="document.getElementById('batchExpiryPicker').remove()">✕</button>
+    </div>`;
+  document.body.appendChild(picker);
+  _batchExpiryOutsideHandler=e=>{if(!picker.contains(e.target)){picker.remove();document.removeEventListener('click',_batchExpiryOutsideHandler);}};
+  setTimeout(()=>document.addEventListener('click',_batchExpiryOutsideHandler),0);
+};
+window._saveBatchExpiry=async(batchId,val)=>{
+  document.getElementById('batchExpiryPicker')?.remove();
+  if(_batchExpiryOutsideHandler)document.removeEventListener('click',_batchExpiryOutsideHandler);
+  const batch=batches.find(b=>b.id===batchId);if(!batch)return;
+  try{
+    await updateDoc(doc(db,'batches',batchId),{expiryDate:val});
+    batch.expiryDate=val;
+    renderBatchGrid();
+    toast(val?`Expiry date saved: ${fmtLeadsDate(val)} ✓`:'Expiry date cleared ✓');
   }catch(e){toast('Error: '+e.message);}
 };
 
@@ -2581,6 +2619,7 @@ function renderBatchGrid(){
         <div>
           <div class="batch-card-name">${esc(b.name)}</div>
           <div class="batch-date-btn ${b.leadsDate?'batch-date-set':''}" data-action="date" data-bid="${b.id}">📅 ${b.leadsDate?fmtLeadsDate(b.leadsDate):'Set leads date'}</div>
+          <div class="batch-date-btn ${b.expiryDate?'batch-date-set':''} ${b.expiryDate&&b.expiryDate<today()?'batch-date-expired':''}" data-action="expiry" data-bid="${b.id}">⏳ ${b.expiryDate?('Exp: '+fmtLeadsDate(b.expiryDate)):'Set expiry date'}</div>
         </div>
         <span class="batch-type-tag ${typeTagClass(b.type)}">${typeLabel(b.type)}</span>
       </div>
@@ -2615,6 +2654,7 @@ function setupBatchDrag(){
         else if(action==='clear')window._clearBatch(bid,bname2);
         else if(action==='delete')window._deleteBatch(bid);
         else if(action==='date')window._pickBatchDate(bid,btn);
+        else if(action==='expiry')window._pickBatchExpiry(bid,btn);
       });
     });
     // Card body — only fires when no action element caught it
@@ -2927,6 +2967,7 @@ function renderList(){
       <td>
         <div class="p-name" ${hasNotes?`onmouseenter="event.stopPropagation();window._showTip(event,'${esc(userNotesPreview(p).replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
+        ${p.address?`<div style="font-size:11px;color:var(--dim);margin-top:1px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(p.address)}</div>`:''}
         ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
         <div class="type-btns" style="display:${p.met?'flex':'none'}">
           <span class="type-pill ${p.prospectType==='smart'?'smart':'smart-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','smart')">🧠 Smart</span>
@@ -2949,7 +2990,7 @@ function renderList(){
       <td style="color:${gColor};font-weight:700;font-size:11px">${gNorm||'—'}</td>
       <td title="${esc(policyText)}">
         <div style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(policyText)}</div>
-        ${activeBatch&&!isAXS&&(p.yearIncepted||p.sumAssured||p.sv)?`<div style="font-size:9px;color:var(--muted);white-space:nowrap;margin-top:1px">${[p.yearIncepted?`${esc(p.yearIncepted)}`:'',p.sumAssured?`SA:${esc(p.sumAssured)}`:'',p.sv?`SV:${esc(p.sv)}`:''].filter(Boolean).join(' · ')}</div>`:''}
+        ${activeBatch&&!isAXS&&(p.premiumPerYear||p.yearIncepted||p.sumAssured||p.sv)?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${[p.premiumPerYear?`${esc(p.premiumPerYear)}`:(p.yearIncepted?`Yr ${esc(p.yearIncepted)}`:''),p.sumAssured?`SA:${esc(p.sumAssured)}`:'',p.sv?`SV:${esc(p.sv)}`:''].filter(Boolean).join(' · ')}</div>`:''}
       </td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
         <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>

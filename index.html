@@ -278,7 +278,7 @@
     .prospect-table tbody tr.cancelled td:first-child{border-left:2px solid rgba(239,68,68,.3)!important;}
     @keyframes rowIn{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:none;}}
 
-    .p-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
+    .p-name{font-weight:600;color:var(--text);font-size:13px;overflow-wrap:break-word;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;}
     .p-aka{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .type-btns{display:flex;gap:3px;margin-top:3px;}
     .type-pill{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;cursor:pointer;border:1px solid;transition:all .15s;letter-spacing:.02em;user-select:none;}
@@ -300,9 +300,9 @@
     .p-phone{color:var(--muted);font-size:11px;white-space:nowrap;}
 
     /* WhatsApp quick-action buttons */
-    .wa-quick-btns{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
+    .wa-quick-btns{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;}
     .cl-mob-prod{display:none;font-size:10px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .wa-quick{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid;transition:all .15s;}
+    .wa-quick{display:inline-flex;align-items:center;gap:1px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid;transition:all .15s;}
     .wa-quick.missed{color:#f87171;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);}
     .wa-quick.missed:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.5);}
     .wa-quick.appt{color:#34d399;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08);}
@@ -316,6 +316,7 @@
     .wa-quick.precall:hover{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.5);}
     .wa-quick.custom{color:#38bdf8;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.08);}
     .wa-quick.custom:hover{background:rgba(56,189,248,.18);border-color:rgba(56,189,248,.5);}
+    @media(max-width:600px){.wa-quick{font-size:8px;padding:1px 4px;}.wa-quick-btns{gap:2px;margin-top:2px;}}
     /* Template modal textareas */
     .tmpl-textarea{width:100%;box-sizing:border-box;padding:8px 10px 20px;border-radius:8px;border:1px solid rgba(51,65,85,.5);background:rgba(12,24,55,.9);color:#f1f5f9;font-size:12px;font-family:inherit;resize:vertical;min-height:90px;line-height:1.5;}
     .tmpl-textarea:focus{outline:none;border-color:rgba(240,165,0,.5);}
@@ -1884,7 +1885,10 @@ function renderFinPriorities(fp){
 // crumb once you're inside a batch, so this slot carries more useful info per type.
 function infoCell(p){
   if(p.leadType==='axs')return renderFinPriorities(p.finPriorities);
-  if(p.leadType==='ekko')return `<span style="color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.premiumPerYear||'—')}</span>`;
+  if(p.leadType==='ekko'){
+    if(activeBatch)return `<span style="color:var(--muted);font-size:11px">${esc(p.nric||'—')}</span>`;
+    return `<span style="color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.premiumPerYear||'—')}</span>`;
+  }
   return `<span class="batch-tag ${batchAccentClass(p.leadType)}">${esc(p.batch||'—')}</span>`;
 }
 
@@ -2891,6 +2895,8 @@ function renderList(){
   if(fc)fc.textContent=`${filtered.length} of ${activeBatch?prospects.filter(p=>p.batch===activeBatch).length:prospects.length}`;
   const tbody=document.getElementById('prospectTbody');
   if(!tbody)return;
+  const thBatch=document.getElementById('thBatchCol');
+  if(thBatch)thBatch.textContent=activeBatch?'NRIC':'Batch';
   if(filtered.length===0){
     tbody.innerHTML='';document.getElementById('emptyState').style.display='block';return;
   }
@@ -3189,6 +3195,7 @@ function renderDetailContent(p){
       <div class="field-row"><div class="fg"><label>Name</label><input id="d_name" value="${esc(p.name||'')}"/></div><div class="fg"><label>Preferred Name</label><input id="d_pname" value="${esc(p.preferredName||'')}"/></div></div>
       <div class="field-row"><div class="fg"><label>NRIC</label><input id="d_nric" value="${esc(p.nric||'')}"/></div><div class="fg"><label>Gender</label><select id="d_gender"><option value="" ${!p.gender?'selected':''}>—</option><option value="M" ${p.gender==='M'?'selected':''}>Male</option><option value="F" ${p.gender==='F'?'selected':''}>Female</option></select></div></div>
       <div class="field-row"><div class="fg"><label>Date of Birth <span id="d_dob_hint" style="font-size:10px;color:var(--dim);font-weight:normal;margin-left:4px"></span></label><input id="d_dob" type="text" placeholder="DD/MM/YYYY or 24 Nov 1981" value="${p.dob||''}" oninput="window._dobHint('d_dob','d_dob_hint')"/></div><div class="fg"><label>Phone</label><input id="d_phone" value="${esc(p.phone||'')}"/></div></div>
+      <div class="field-row"><div class="fg"><label>Email</label><input id="d_email" type="email" placeholder="email@example.com" value="${esc(p.email||'')}"/></div><div class="fg"><label>Address</label><input id="d_address" placeholder="Home / mailing address" value="${esc(p.address||'')}"/></div></div>
     </div>
     <div class="d-section">
       <div class="d-section-title">Status &amp; Tracking</div>
@@ -3245,7 +3252,8 @@ function renderDetailContent(p){
       </div></div>`
     :`<div class="d-section"><div class="d-section-title">Existing Policies</div>
       <div class="field-row single"><div class="fg"><label>Policy / Policies</label><textarea id="d_policies" rows="2">${esc(p.policies||'')}</textarea></div></div>
-      <div class="field-row single"><div class="fg"><label>Premium / Year (skip Shield/Hospital)</label><input id="d_premium" placeholder="e.g. $1,234 / 2009" value="${esc(p.premiumPerYear||'')}"/></div></div></div>`}
+      <div class="field-row"><div class="fg"><label>Premium / Year (skip Shield/Hospital)</label><input id="d_premium" placeholder="e.g. $1,234 / 2009" value="${esc(p.premiumPerYear||'')}"/></div><div class="fg"><label>Year Incepted</label><input id="d_yearIncepted" placeholder="e.g. 2009" value="${esc(p.yearIncepted||'')}"/></div></div>
+      <div class="field-row"><div class="fg"><label>Sum Assured</label><input id="d_sumAssured" placeholder="e.g. $200,000" value="${esc(p.sumAssured||'')}"/></div><div class="fg"><label>Surrender Value (SV)</label><input id="d_sv" placeholder="e.g. $12,500" value="${esc(p.sv||'')}"/></div></div></div>`}
     <div class="d-section">
       <div class="check-row">
         <label class="check-label"><input type="checkbox" id="d_referral" ${p.referral?'checked':''}/> <span style="color:var(--gold)">⭐ Referred by a client</span></label>
@@ -3272,13 +3280,13 @@ window._saveDetail=async(id,type)=>{
     hist.push({date:today(),note,type:'appt',updatedAt:new Date().toISOString()});
   }
   const _dobRaw=document.getElementById('d_dob').value.trim();const _dobP=parseDOB(_dobRaw);if(_dobRaw&&!_dobP){toast('Date of birth format not recognised — use DD/MM/YYYY');return;}
-  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,dob:_dobP?.fmt||null,birthYear:_dobP?.y||null,phone:document.getElementById('d_phone').value.trim(),status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist};
+  const upd={name:document.getElementById('d_name').value.trim(),preferredName:document.getElementById('d_pname').value.trim(),nric:document.getElementById('d_nric').value.trim(),gender:document.getElementById('d_gender').value,dob:_dobP?.fmt||null,birthYear:_dobP?.y||null,phone:document.getElementById('d_phone').value.trim(),email:document.getElementById('d_email')?.value.trim()||'',address:document.getElementById('d_address')?.value.trim()||'',status:document.getElementById('d_status').value,calledCount:parseInt(document.getElementById('d_called').value)||0,pickedUp:document.getElementById('d_pickedup').checked,contacted:document.getElementById('d_contacted').checked,meetingSet:document.getElementById('d_meetingset').checked,met:document.getElementById('d_met').checked,purchased:document.getElementById('d_purchased').checked,referral:document.getElementById('d_referral').checked,followUpDate:newFU,appointmentDate:newAppt,followUpHistory:hist};
   if(type==='axs'){
     upd.savings=document.getElementById('d_savings').value;
     const fp={};FIN_PRIORITIES.forEach(f=>{const v=parseInt(document.getElementById(`d_fp_${f.key}`)?.value);if(v)fp[f.key]=v;});
     upd.finPriorities=fp;
   }
-  else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();}
+  else{upd.policies=document.getElementById('d_policies').value.trim();upd.premiumPerYear=document.getElementById('d_premium').value.trim();upd.yearIncepted=document.getElementById('d_yearIncepted')?.value.trim()||'';upd.sumAssured=document.getElementById('d_sumAssured')?.value.trim()||'';upd.sv=document.getElementById('d_sv')?.value.trim()||'';}
   const fuChanged=newFU&&newFU!==(p.followUpDate||'');
   // Clearing the appointment date here should also drop it from Google Calendar,
   // same as the dedicated Delete Appt button does.
@@ -3491,7 +3499,7 @@ function handleFile(file){
           }
           return (p[c]??'').toString();
         };
-        const cols=['name','phone','nric','gender','birthYear','policies','premiumPerYear','savings','finPriorities'];
+        const cols=['name','phone','nric','gender','birthYear','email','policies','premiumPerYear','savings','sumAssured','sv','address','finPriorities'];
         const visible=cols.filter(c=>data.slice(0,5).some(p=>previewVal(p,c).trim()));
         document.getElementById('importPreview').innerHTML=`<div class="import-preview"><table><tr>${visible.map(c=>`<th>${c}</th>`).join('')}</tr>${data.slice(0,5).map(p=>`<tr>${visible.map(c=>`<td title="${esc(previewVal(p,c))}">${esc(previewVal(p,c))}</td>`).join('')}</tr>`).join('')}</table></div>`;
         statusEl.textContent=`${data.length} prospects found · preview shows first 5`;
@@ -3540,7 +3548,11 @@ function mapCSVRow(headers,row,batch,rowIndex=0){
   }
   const dobP=parseCSVDOB(get('date of birth','dob','d.o.b','d.o.b.','birthdate','birth date'));
   const birthYear=dobP?.y||parseInt(get('year of birth','birth year','dob year','yob','year'))||null;
-  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),dob:dobP?.fmt||null,birthYear,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear:isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year'),savings:isAXS?get('savings'):'',finPriorities,followUpDate:'',followUpHistory:[],rowIndex};
+  const premRaw=isAXS?'':get('premiums / year incepted','premiums/year incepted','premium/year','premium per year');
+  const premSep=isAXS?'':get('premiums','premium');
+  const yearInc=isAXS?'':get('year incepted');
+  const premiumPerYear=isAXS?'':(premRaw||(premSep&&yearInc?`${premSep} / ${yearInc}`:premSep||yearInc));
+  return{name:get('name','full name','fullname','customer name','client name','prospect name','contact name','client','prospect'),preferredName:get('preferred name','preferred','nickname','nick name'),nric:get('nric','ic','ic no','nric no','id'),gender:get('gender','sex'),phone:get('hp number','phone','mobile','contact no','contact number','hp','handphone','hp no','mobile no'),email:get('email','e-mail','email address'),dob:dobP?.fmt||null,birthYear,batch,leadType:btype,status:'New',calledCount:parseInt(get('called no. of times?','called how many times?','called no. of times','times called'))||0,pickedUp:bool(get('pick up?','pick up','picked up')),contacted:false,meetingSet:false,met:bool(get('met')),purchased:bool(get('purchased','converted')),referral:false,policies:isAXS?'':get('policies','policy'),premiumPerYear,savings:isAXS?get('savings'):'',sumAssured:isAXS?'':get('sum assured','sa'),sv:isAXS?'':get('sv','surrender value','s.v.'),address:get('address','addr','home address','residential address','mailing address'),extraNotes:get('extra notes','extra note','remarks','comments'),finPriorities,followUpDate:'',followUpHistory:[],rowIndex};
 }
 function normPhone(s){return String(s||'').replace(/\D/g,'');}
 // Re-importing the same batch should update existing leads (matched by phone),

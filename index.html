@@ -2967,7 +2967,6 @@ function renderList(){
       <td>
         <div class="p-name" ${hasNotes?`onmouseenter="event.stopPropagation();window._showTip(event,'${esc(userNotesPreview(p).replace(/'/g,"\\'").replace(/\n/g,'\\n'))}')" onmouseleave="window._hideTip()"`:''}>${p.referral?'<span style="font-size:9px;margin-right:3px">⭐</span>':''}${hasNotes?'<span style="font-size:9px;margin-right:3px" title="Has notes — hover to preview">📝</span>':''}${esc(p.name)}</div>
         ${p.preferredName?`<div class="p-aka">aka ${esc(p.preferredName)}</div>`:''}
-        ${p.address?`<div style="font-size:11px;color:var(--dim);margin-top:1px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${esc(p.address)}</div>`:''}
         ${p.referredBy?`<div class="p-aka" style="color:var(--gold);opacity:.8">via ${esc(p.referredBy)}</div>`:''}
         <div class="type-btns" style="display:${p.met?'flex':'none'}">
           <span class="type-pill ${p.prospectType==='smart'?'smart':'smart-off'}" onclick="event.stopPropagation();window._setProspectType('${p.id}','smart')">🧠 Smart</span>
@@ -2990,7 +2989,7 @@ function renderList(){
       <td style="color:${gColor};font-weight:700;font-size:11px">${gNorm||'—'}</td>
       <td title="${esc(policyText)}">
         <div style="color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(policyText)}</div>
-        ${activeBatch&&!isAXS&&(p.premiumPerYear||p.yearIncepted||p.sumAssured||p.sv)?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${[p.premiumPerYear?`${esc(p.premiumPerYear)}`:(p.yearIncepted?`Yr ${esc(p.yearIncepted)}`:''),p.sumAssured?`SA:${esc(p.sumAssured)}`:'',p.sv?`SV:${esc(p.sv)}`:''].filter(Boolean).join(' · ')}</div>`:''}
+        ${activeBatch&&!isAXS&&(p.premiumPerYear||p.yearIncepted||p.sumAssured||p.sv)?`<div style="font-size:11px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35;margin-top:1px">${[p.premiumPerYear?`${esc(p.premiumPerYear)}`:(p.yearIncepted?`Yr ${esc(p.yearIncepted)}`:''),p.sumAssured?`SA:${esc(p.sumAssured)}`:'',p.sv?`SV:${esc(p.sv)}`:''].filter(Boolean).join(' · ')}</div>`:''}
       </td>
       <td onclick="event.stopPropagation();window._quickStatus('${p.id}',event)">
         <span class="status-badge ${statusCls(p.status)}">${esc(p.status||'New')}</span>
